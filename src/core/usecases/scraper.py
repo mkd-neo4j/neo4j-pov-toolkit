@@ -1,7 +1,50 @@
 """
-Web scraper for Neo4j use cases
+Neo4j Use Case Hierarchy Scraper
 
-Extracts hierarchical use case information from neo4j.com/developer/industry-use-cases/
+Purpose:
+    Scrapes the Neo4j Industry Use Cases website and builds a hierarchical
+    data structure representing all available use cases organized by industry
+    and subcategory.
+
+Why This Module Exists:
+    The LLM needs to know what use cases are available so it can:
+    1. Show users what patterns they can leverage
+    2. Guide users to the right use case for their problem
+    3. Fetch specific use case documentation when generating code
+
+    Instead of hard-coding use case lists, we scrape the live website to always
+    have the latest use cases as Neo4j adds new ones.
+
+Architecture Context:
+    This is part of the use case discovery system:
+    1. This scraper builds the hierarchy of use cases (industries → subcategories → use cases)
+    2. list-usecases CLI command displays the hierarchy or outputs URLs
+    3. LLM uses URLs to fetch specific use case pages via web_utils.py
+    4. LLM reads use case markdown to understand data models
+    5. LLM generates appropriate ingestion code
+
+Data Structure:
+    Builds a tree structure:
+    Root
+    ├── Financial Services (Industry)
+    │   ├── Retail Banking (Subcategory)
+    │   │   ├── Synthetic Identity Fraud (Use Case)
+    │   │   └── Account Takeover Fraud (Use Case)
+    │   └── Investment Banking (Subcategory)
+    │       └── Mutual Fund Dependency Analytics (Use Case)
+    └── Insurance (Industry)
+        ├── Claims Fraud (Use Case)
+        └── Quote Fraud (Use Case)
+
+Key Components:
+    - UseCaseNode: Dataclass representing a node in the hierarchy
+    - scrape_use_cases(): Main function that builds the tree
+    - get_all_use_case_urls(): Flattens tree into list of URLs
+
+Used By:
+    - list-usecases CLI command
+    - LLM when discovering available use cases
+    - Any code that needs the use case catalog
 """
 
 from dataclasses import dataclass, field
@@ -58,19 +101,7 @@ def scrape_use_cases(base_url: str = "https://neo4j.com/developer/industry-use-c
             level=-1
         )
 
-        # Find the main navigation/content area with use cases
-        # The structure appears to be in navigation menus or content sections
-        # We'll look for common patterns: nav elements, lists with links, etc.
-
-        # Strategy 1: Look for navigation structure with nested lists
-        nav_sections = soup.find_all(['nav', 'div'], class_=lambda x: x and ('nav' in x.lower() or 'menu' in x.lower()))
-
-        # Strategy 2: Look for the main content with industry sections
-        content_sections = soup.find_all(['section', 'div', 'article'])
-
-        # Parse based on the structure we found from WebFetch
-        # The page has industries at top level, with subcategories and use cases nested
-
+        # Extract industries and their hierarchies from the navigation menu
         industries = _extract_industries(soup, base_url)
         root.children = industries
 
@@ -85,116 +116,73 @@ def scrape_use_cases(base_url: str = "https://neo4j.com/developer/industry-use-c
 
 
 def _extract_industries(soup: BeautifulSoup, base_url: str) -> List[UseCaseNode]:
-    """Extract industry nodes from the page"""
+    """Extract industry nodes from the page by parsing the navigation menu"""
+    from urllib.parse import urljoin
+
+    # Find the navigation menu
+    nav = soup.find('nav', class_='nav-menu')
+    if not nav:
+        return []
+
+    # Find all nav items
+    nav_items = nav.find_all('li', class_='nav-item')
+
+    # Build a hierarchy using a stack to track parents at each depth
     industries = []
+    depth_stack = {}  # depth -> current node at that depth
 
-    # Based on the structure we know:
-    # Financial Services, Insurance, Manufacturing, Industry Agnostic
+    for item in nav_items:
+        # Get depth from data attribute
+        depth_str = item.get('data-depth', '0')
+        try:
+            depth = int(depth_str)
+        except (ValueError, TypeError):
+            continue
 
-    # Look for links that match industry patterns
-    all_links = soup.find_all('a', href=True)
+        # Skip root level (depth 0)
+        if depth == 0:
+            continue
 
-    # Known industries and their patterns
-    industry_patterns = {
-        'Financial Services': '/finserv/',
-        'Insurance': '/insurance/',
-        'Manufacturing': '/manufacturing/',
-        'Industry Agnostic': '/agnostic/'
-    }
+        # Find the link in this item (direct child only, not nested)
+        link = item.find('a', class_='nav-link', recursive=False)
+        if not link:
+            continue
 
-    # First pass: find industry links
-    for name, pattern in industry_patterns.items():
-        industry_node = UseCaseNode(
+        name = link.get_text(strip=True)
+        href = link.get('href', '')
+
+        # If we hit "Whitepapers" or "Data Models" at depth 1, stop processing entirely
+        if depth == 1 and name in {'Whitepapers', 'Data Models'}:
+            break
+
+        # Skip section headers, overview, and items with no meaningful href
+        if not href or href == './' or name == 'Overview' or name.startswith('Neo4j Industry'):
+            continue
+
+        # Convert relative URL to absolute
+        full_url = urljoin(base_url, href)
+
+        # Determine level: depth 1 = industry (level 0), depth 2 = subcategory (level 1), depth 3+ = use case (level 2)
+        level = depth - 1
+
+        # Create the node
+        node = UseCaseNode(
             name=name,
-            url=f"https://neo4j.com/developer/industry-use-cases{pattern}",
-            level=0
+            url=full_url,
+            level=level
         )
 
-        # For each industry, we would need to fetch subcategories
-        # For now, let's add the known structure from our research
-        if name == 'Financial Services':
-            industry_node.children = [
-                UseCaseNode(
-                    name='Investment Banking',
-                    url='https://neo4j.com/developer/industry-use-cases/finserv/investment-banking/',
-                    level=1,
-                    children=[
-                        UseCaseNode('Mutual Fund Dependency Analytics',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/investment-banking/mutual-fund-dependency-analytics/', 2),
-                        UseCaseNode('Regulatory Dependency Mapping',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/investment-banking/regulatory-dependency-mapping/', 2)
-                    ]
-                ),
-                UseCaseNode(
-                    name='Retail Banking',
-                    url='https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/',
-                    level=1,
-                    children=[
-                        UseCaseNode('Account Takeover Fraud',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/account-takeover-fraud/', 2),
-                        UseCaseNode('Automated Facial Recognition',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/automated-facial-recognition/', 2),
-                        UseCaseNode('Deposit Analysis',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/deposit-analysis/', 2),
-                        UseCaseNode('Entity Resolution',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/entity-resolution/', 2),
-                        UseCaseNode('Synthetic Identity Fraud',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/synthetic-identity-fraud/', 2),
-                        UseCaseNode('Transaction Fraud Ring',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/transaction-fraud-ring/', 2),
-                        UseCaseNode('Transaction Monitoring',
-                                  'https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/transaction-monitoring/', 2)
-                    ]
-                )
-            ]
-        elif name == 'Insurance':
-            industry_node.children = [
-                UseCaseNode('Claims Fraud',
-                          'https://neo4j.com/developer/industry-use-cases/insurance/claims-fraud/', 1),
-                UseCaseNode('Quote Fraud',
-                          'https://neo4j.com/developer/industry-use-cases/insurance/quote-fraud/', 1)
-            ]
-        elif name == 'Manufacturing':
-            industry_node.children = [
-                UseCaseNode(
-                    name='Supply Chain and Logistics Management',
-                    url='https://neo4j.com/developer/industry-use-cases/manufacturing/supply-chain-management/',
-                    level=1,
-                    children=[
-                        UseCaseNode('E.V. Route Planning',
-                                  'https://neo4j.com/developer/industry-use-cases/manufacturing/supply-chain-management/ev-route-planning/', 2)
-                    ]
-                ),
-                UseCaseNode(
-                    name='Product Design and Engineering',
-                    url='https://neo4j.com/developer/industry-use-cases/manufacturing/product-design-and-engineering/',
-                    level=1,
-                    children=[
-                        UseCaseNode('Configurable B.O.M.',
-                                  'https://neo4j.com/developer/industry-use-cases/manufacturing/product-design-and-engineering/configurable-bom/', 2),
-                        UseCaseNode('Engineering Traceability',
-                                  'https://neo4j.com/developer/industry-use-cases/manufacturing/product-design-and-engineering/engineering-traceability/', 2)
-                    ]
-                ),
-                UseCaseNode(
-                    name='Production Planning and Optimization',
-                    url='https://neo4j.com/developer/industry-use-cases/manufacturing/production-planning-and-optimization/',
-                    level=1,
-                    children=[
-                        UseCaseNode('Process Monitoring and CPA',
-                                  'https://neo4j.com/developer/industry-use-cases/manufacturing/production-planning-and-optimization/process-monitoring-cpa/', 2)
-                    ]
-                )
-            ]
-        elif name == 'Industry Agnostic':
-            industry_node.children = [
-                UseCaseNode('Entity Resolution',
-                          'https://neo4j.com/developer/industry-use-cases/agnostic/entity-resolution/', 1),
-                UseCaseNode('IT Service Graph',
-                          'https://neo4j.com/developer/industry-use-cases/agnostic/it-service-graph/', 1)
-            ]
-
-        industries.append(industry_node)
+        # Add to appropriate parent
+        if level == 0:
+            # This is an industry (top level)
+            industries.append(node)
+            depth_stack[depth] = node
+        elif depth > 1:
+            # This is a child of the previous level
+            parent_depth = depth - 1
+            if parent_depth in depth_stack:
+                depth_stack[parent_depth].children.append(node)
+                depth_stack[depth] = node
 
     return industries
 
