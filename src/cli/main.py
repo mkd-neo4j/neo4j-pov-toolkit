@@ -8,6 +8,7 @@ import sys
 import argparse
 from .utils.formatting import Colors
 from .commands.neo4j import test_setup_parser, info_setup_parser
+from .commands.usecases import setup_parser as usecases_setup_parser
 
 
 # Toolkit version
@@ -30,11 +31,14 @@ def main():
 {Colors.BOLD}Commands:{Colors.RESET}
   {Colors.CYAN}neo4j-test{Colors.RESET}          Test Neo4j database connection
   {Colors.CYAN}neo4j-info{Colors.RESET}          Show comprehensive Neo4j information
+  {Colors.CYAN}list-usecases{Colors.RESET}       List available Neo4j use cases
 
 {Colors.BOLD}Examples:{Colors.RESET}
   python cli.py neo4j-test                 Test connection
   python cli.py neo4j-test --verbose       Detailed test
   python cli.py neo4j-info                 Full connection info
+  python cli.py list-usecases              Show use case hierarchy
+  python cli.py list-usecases --urls-only  Get URLs for LLM
 
 {Colors.BOLD}Getting Started:{Colors.RESET}
   1. Create .env file: {Colors.CYAN}cp .env.example .env{Colors.RESET}
@@ -60,6 +64,7 @@ def main():
     # Register commands
     test_setup_parser(subparsers)
     info_setup_parser(subparsers)
+    usecases_setup_parser(subparsers)
 
     # Parse arguments
     args = parser.parse_args()
