@@ -203,33 +203,3 @@ def get_all_use_case_urls(root: Optional[UseCaseNode] = None) -> List[str]:
             return []
 
     return root.get_all_urls()
-
-
-def print_tree(node: UseCaseNode, indent: int = 0, show_urls: bool = False):
-    """
-    Print the use case tree in a readable format
-
-    Args:
-        node: The node to print
-        indent: Current indentation level
-        show_urls: Whether to show URLs alongside names
-    """
-    if node.level >= 0:  # Skip root node
-        prefix = "  " * indent
-
-        # Different symbols for different levels
-        if node.level == 0:
-            symbol = "📁"
-        elif node.level == 1:
-            symbol = "📂"
-        else:
-            symbol = "📄"
-
-        name_display = f"{prefix}{symbol} {node.name}"
-        if show_urls:
-            print(f"{name_display} ({node.url})")
-        else:
-            print(name_display)
-
-    for child in node.children:
-        print_tree(child, indent + 1, show_urls)
