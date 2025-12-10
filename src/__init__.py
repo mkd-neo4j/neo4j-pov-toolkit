@@ -1,1 +1,1 @@
-"""Neo4j Demo Toolkit"""
+"""Neo4j PoV Toolkit"""

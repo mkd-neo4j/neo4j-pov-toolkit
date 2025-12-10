@@ -1,5 +1,5 @@
 """
-Neo4j Demo Toolkit - Main CLI Logic
+Neo4j PoV Toolkit - Main CLI Logic
 
 Handles argument parsing, command routing, and global flags.
 """
@@ -20,12 +20,12 @@ def main():
 
     # Handle global --version flag before argument parsing
     if '--version' in sys.argv:
-        print(f"Neo4j Demo Toolkit v{VERSION}")
+        print(f"Neo4j PoV Toolkit v{VERSION}")
         return 0
 
     # Create main parser
     parser = argparse.ArgumentParser(
-        description='Neo4j Demo Toolkit - Generate Neo4j ingestion code from your data',
+        description='Neo4j PoV Toolkit - Generate Neo4j ingestion code from your data',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {Colors.BOLD}Commands:{Colors.RESET}

@@ -1,8 +1,8 @@
-# Neo4j Demo Toolkit - Technical Solution
+# Neo4j PoV Toolkit - Technical Solution
 
 ## Overview
 
-The Neo4j Demo Toolkit is an LLM-powered code generation system that transforms raw data into a working Neo4j database with minimal user effort. The user provides their data, selects a use case, and the system generates a single, readable ingestion file that maps their data to proven Neo4j data models.
+The Neo4j PoV Toolkit is an LLM-powered code generation system that transforms raw data into a working Neo4j database with minimal user effort. The user provides their data, selects a use case, and the system generates a single, readable ingestion file that maps their data to proven Neo4j data models.
 
 **Core Principle**: The LLM generates only the essential translation logic. Everything else database writing, logging, connection management, version handling is pre-built, tested, and optimized.
 
@@ -922,8 +922,8 @@ From the user's perspective, here's the complete experience:
 
 ```bash
 # Clone the repository
-git clone https://github.com/neo4j/demo-toolkit.git
-cd demo-toolkit
+git clone https://github.com/neo4j/pov-toolkit.git
+cd pov-toolkit
 
 # Create .env file
 cp .env.example .env

@@ -1,1 +1,1 @@
-"""Core infrastructure for Neo4j Demo Toolkit"""
+"""Core infrastructure for Neo4j PoV Toolkit"""

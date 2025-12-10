@@ -1,4 +1,4 @@
-# Why the Neo4j Demo Toolkit Exists
+# Why the Neo4j PoV Toolkit Exists
 
 ## The Goal
 
@@ -47,8 +47,8 @@ No graph expertise required. No data modeling degree needed. No days of trial an
 - **Data analysts with a problem**: You have the data and the question, but not the graph knowledge
 
 ### Neo4j Teams
-- **Field engineers**: You can accelerate customer demos and POCs
-- **Solution architects**: You can quickly stand up use case demonstrations
+- **Field engineers**: You can accelerate customer povs and POCs
+- **Solution architects**: You can quickly stand up use case povnstrations
 - **Customer success teams**: You can help customers get to "aha!" moments faster
 
 ## What This Solves
@@ -100,10 +100,10 @@ The repository provides:
 ### For Users
 **Stop thinking. Start seeing value.**
 
-You shouldn't need to become a graph expert to see if Neo4j solves your problem. This toolkit removes every barrier between your data and demonstrable value.
+You shouldn't need to become a graph expert to see if Neo4j solves your problem. This toolkit removes every barrier between your data and povnstrable value.
 
 ### For Neo4j
-**Democratize graph expertise.**
+**PoVcratize graph expertise.**
 
 This toolkit captures the collective knowledge of Neo4j's engineering teams, solutions architects, consultants, and field engineers. You get the benefit of that expertise automatically—as if you had a Neo4j expert sitting next to you, writing code and modeling data on your behalf.
 
@@ -127,5 +127,5 @@ This is not about building production-grade, enterprise-hardened systems. This i
 - **Speed**: Minutes to value, not days
 - **Simplicity**: Minimal data, minimal steps
 - **Accessibility**: No graph expertise required
-- **Demonstration**: Prove the value of Neo4j quickly
+- **PoVnstration**: Prove the value of Neo4j quickly
 - **Acceleration**: Remove friction from exploration and POCs

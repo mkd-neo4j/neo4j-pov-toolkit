@@ -1,4 +1,4 @@
-"""Neo4j Demo Toolkit CLI"""
+"""Neo4j PoV Toolkit CLI"""
 
 from .main import main
 

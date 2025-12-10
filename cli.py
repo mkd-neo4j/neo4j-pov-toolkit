@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Neo4j Demo Toolkit - CLI Entry Point
+Neo4j PoV Toolkit - CLI Entry Point
 
 A professional CLI for LLM-powered Neo4j data ingestion code generation.
 
@@ -20,9 +20,23 @@ def auto_detect_venv():
     """
     Automatically detect and activate a virtual environment if not already in one.
 
-    This function checks if Python is running in a virtual environment. If not, it
-    searches for common venv directories and programmatically adds them to sys.path.
-    This allows the CLI to work without requiring users to manually activate the venv.
+    Purpose:
+        Provides a seamless user experience by automatically activating the virtual
+        environment when the CLI is run. Users don't need to remember to activate venv.
+
+    Why This Exists:
+        Common user problem: "I ran the CLI and got ModuleNotFoundError"
+        Solution: Automatically find and activate venv if present
+
+    How It Works:
+        1. Checks if already in a venv (sys.prefix != sys.base_prefix)
+        2. If not, searches for venv folders (venv/, env/, .venv/)
+        3. Validates it's a real venv (checks for pyvenv.cfg)
+        4. Adds site-packages to sys.path
+        5. Sets VIRTUAL_ENV environment variable
+        6. Updates PATH to include venv bin directory
+
+    This runs before any imports, ensuring toolkit modules are available.
     """
     # Check if already in a virtual environment
     if sys.prefix != sys.base_prefix:

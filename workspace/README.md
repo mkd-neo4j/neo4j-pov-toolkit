@@ -1,6 +1,6 @@
 # Workspace - Your Area
 
-This is your workspace. Everything you need to interact with the Neo4j Demo Toolkit is here.
+This is your workspace. Everything you need to interact with the Neo4j PoV Toolkit is here.
 
 ## Folders
 

@@ -1,7 +1,31 @@
 """
-neo4j-test command
+neo4j-test CLI Command - Quick Connection Validation
 
-Test Neo4j database connection.
+Purpose:
+    Provides a fast, user-friendly way to validate that the Neo4j database connection is working before
+    attempting data loading operations. First command users should run after configuration.
+
+Command Usage:
+    python cli.py neo4j-test                 # Quick test with minimal output
+    python cli.py neo4j-test --verbose       # Detailed version information
+    python cli.py neo4j-test --json          # Machine-readable output for LLMs
+
+When LLMs Should Run This:
+    - After user creates/updates .env file
+    - Before generating data mapper code
+    - When troubleshooting connection issues
+    - As a prerequisite check before other operations
+
+What It Tests:
+    ✓ Can read .env file
+    ✓ Can establish connection to Neo4j
+    ✓ Credentials are valid
+    ✓ Database is accessible
+    ✓ Can query database version
+
+Return Codes:
+    0 - Connection successful
+    1 - Connection failed (check output for details)
 """
 
 import os
@@ -12,7 +36,27 @@ from ....core.neo4j.version import get_neo4j_info
 
 
 def execute(args):
-    """Execute neo4j-test command"""
+    """
+    Execute the neo4j-test command to validate database connectivity.
+
+    Loads credentials from .env, attempts connection, and reports results in either
+    human-friendly or JSON format based on command-line flags.
+
+    Args:
+        args: Parsed command-line arguments with attributes:
+              - json (bool): Output as JSON instead of formatted text
+              - verbose (bool): Show detailed version information
+
+    Returns:
+        int: Exit code - 0 for success, 1 for failure
+
+    Behavior:
+        1. Loads .env file credentials
+        2. Displays connection test header box
+        3. Calls get_neo4j_info() to attempt connection
+        4. Formats and displays results based on --json or --verbose flags
+        5. Provides helpful next steps on failure
+    """
     load_dotenv()
 
     print_box("Neo4j Connection Test")

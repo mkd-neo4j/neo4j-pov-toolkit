@@ -1,7 +1,36 @@
 """
-Web utilities for fetching and converting web pages
+Web Content Fetching and Conversion Utilities
 
-Provides generic utilities for web scraping and content conversion.
+Purpose:
+    Provides utilities for fetching web pages and converting HTML to markdown.
+    Specifically designed to scrape Neo4j use case documentation from neo4j.com
+    and convert it into clean, LLM-readable markdown format.
+
+Why This Module Exists:
+    The toolkit leverages Neo4j's industry use case library to guide code generation.
+    When an LLM needs to understand a use case (e.g., "Synthetic Identity Fraud"),
+    it needs the use case documentation in a format it can process (markdown).
+
+    This module:
+    - Fetches HTML from Neo4j use case pages
+    - Extracts main content (removing navigation, headers, footers)
+    - Converts HTML to clean markdown
+    - Preserves code blocks with syntax highlighting info
+    - Cleans up excessive whitespace
+
+Used By:
+    - get-usecase CLI command (fetches specific use case pages)
+    - Use case scraper (downloads use case content for LLM analysis)
+
+Key Functions:
+    fetch_page_as_markdown() - Main entry point; fetches URL and returns markdown
+
+Architecture Context:
+    This is part of the use case discovery system:
+    1. scraper.py builds hierarchy of use case URLs
+    2. web_utils.py fetches and converts individual use case pages
+    3. LLM reads the markdown to understand data models and patterns
+    4. LLM generates ingestion code based on the use case
 """
 
 from typing import Optional, Dict, List
@@ -135,19 +164,64 @@ def _cleanup_markdown(markdown: str) -> str:
 
 def fetch_page_as_markdown(url: str, timeout: int = 10) -> Optional[str]:
     """
-    Fetch a web page and convert its HTML content to markdown
+    Fetch a web page and convert its HTML content to clean, LLM-readable markdown.
 
-    Attempts to extract only the main content area (article/main) to avoid
-    navigation, headers, and sidebars. Falls back to full page if no main
-    content is found. Code blocks are converted to fenced code blocks with
-    language identifiers.
+    This is the main entry point for converting Neo4j use case pages (or any web page)
+    into markdown format suitable for LLM processing.
+
+    Purpose:
+        Enable LLMs to read and understand Neo4j use case documentation by converting
+        HTML pages into clean markdown that preserves structure, code blocks, and
+        essential content while removing navigation cruft.
+
+    How It Works:
+        1. Fetches the HTML from the provided URL
+        2. Parses HTML using BeautifulSoup
+        3. Extracts main content (article, main tag) to avoid navigation
+        4. Extracts and preserves code blocks with language info
+        5. Converts HTML to markdown using html2text
+        6. Restores code blocks as fenced markdown code blocks
+        7. Cleans up excessive whitespace
+        8. Returns clean markdown string
 
     Args:
-        url: The URL to fetch
-        timeout: Request timeout in seconds (default: 10)
+        url (str): Full URL to fetch (e.g., "https://neo4j.com/developer/industry-use-cases/...")
+        timeout (int): Request timeout in seconds (default: 10)
 
     Returns:
-        Markdown content of the page, or None if fetching/conversion fails
+        str: Markdown content of the page with preserved code blocks and clean formatting
+        None: If fetching or conversion fails (network error, parse error, etc.)
+
+    Example Usage:
+        from src.core.web_utils import fetch_page_as_markdown
+
+        url = "https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/synthetic-identity-fraud/"
+        markdown = fetch_page_as_markdown(url)
+
+        if markdown:
+            print(markdown)  # Clean markdown content ready for LLM
+
+    LLM Workflow:
+        1. LLM discovers use case URL via list-usecases command
+        2. LLM runs: python cli.py get-usecase <url>
+        3. This function fetches and converts the page
+        4. LLM receives markdown with data model and Cypher examples
+        5. LLM uses markdown to inform generated ingestion code
+
+    What Gets Extracted:
+        ✓ Main article content
+        ✓ Code blocks (Cypher, Python, etc.) with language tags
+        ✓ Headings, lists, paragraphs
+        ✓ Links (converted to markdown format)
+
+    What Gets Filtered Out:
+        ✗ Navigation menus
+        ✗ Headers and footers
+        ✗ Sidebars
+        ✗ Ads and tracking scripts
+
+    Returns:
+        Clean markdown or None on failure. Check for None and handle gracefully.
     """
     try:
         # Fetch the page
