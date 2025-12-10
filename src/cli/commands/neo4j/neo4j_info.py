@@ -52,12 +52,12 @@ def setup_parser(subparsers):
     """Setup argument parser for neo4j-info command"""
     parser = subparsers.add_parser(
         'neo4j-info',
-        help='Show comprehensive Neo4j information'
+        help='Display detailed Neo4j connection and version information'
     )
     parser.add_argument(
         '--json',
         action='store_true',
-        help='Output as JSON'
+        help='Output as JSON format instead of formatted text'
     )
     parser.set_defaults(func=execute)
     return parser

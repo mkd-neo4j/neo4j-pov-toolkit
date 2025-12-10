@@ -123,17 +123,17 @@ def setup_parser(subparsers):
     """Setup argument parser for neo4j-test command"""
     parser = subparsers.add_parser(
         'neo4j-test',
-        help='Test Neo4j database connection'
+        help='Validate Neo4j database connection using credentials from .env file'
     )
     parser.add_argument(
         '--json',
         action='store_true',
-        help='Output as JSON'
+        help='Output as JSON format instead of formatted text'
     )
     parser.add_argument(
         '--verbose', '-v',
         action='store_true',
-        help='Show detailed connection information'
+        help='Show detailed version and configuration information'
     )
     parser.set_defaults(func=execute)
     return parser

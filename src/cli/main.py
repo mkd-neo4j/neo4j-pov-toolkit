@@ -29,16 +29,39 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {Colors.BOLD}Commands:{Colors.RESET}
-  {Colors.CYAN}neo4j-test{Colors.RESET}          Test Neo4j database connection
-  {Colors.CYAN}neo4j-info{Colors.RESET}          Show comprehensive Neo4j information
-  {Colors.CYAN}list-usecases{Colors.RESET}       List available Neo4j use cases
+  {Colors.CYAN}neo4j-test{Colors.RESET} [--json] [--verbose]
+      Validate Neo4j database connection using credentials from .env file
+      Options:
+        --json      Output as JSON format
+        --verbose   Show detailed version information
+
+  {Colors.CYAN}neo4j-info{Colors.RESET} [--json]
+      Display detailed Neo4j connection and version information
+      Options:
+        --json      Output as JSON format
+
+  {Colors.CYAN}list-usecases{Colors.RESET} [--json] [--urls-only] [--verbose]
+      List all available Neo4j use cases by scraping neo4j.com/use-cases
+      Options:
+        --json        Output as JSON format
+        --urls-only   Output only URLs (for LLM/scripting)
+        --verbose     Show URLs in tree view
+
+  {Colors.CYAN}get-usecase{Colors.RESET} <URL> [--output FILE]
+      Fetch a Neo4j use case page from neo4j.com and convert to markdown
+      Required:
+        URL           Full Neo4j use case page URL (e.g., https://neo4j.com/use-cases/fraud-detection/)
+      Options:
+        --output, -o  Save to file instead of stdout
 
 {Colors.BOLD}Examples:{Colors.RESET}
-  python cli.py neo4j-test                 Test connection
-  python cli.py neo4j-test --verbose       Detailed test
-  python cli.py neo4j-info                 Full connection info
-  python cli.py list-usecases              Show use case hierarchy
-  python cli.py list-usecases --urls-only  Get URLs for LLM
+  python cli.py neo4j-test                                    Test connection
+  python cli.py neo4j-test --verbose                          Detailed test
+  python cli.py neo4j-info                                    Full connection info
+  python cli.py list-usecases                                 Show use case hierarchy
+  python cli.py list-usecases --urls-only                     Get URLs for LLM
+  python cli.py get-usecase https://neo4j.com/use-cases/...   Fetch use case as markdown
+  python cli.py get-usecase <URL> -o usecase.md               Save to file
 
 {Colors.BOLD}Getting Started:{Colors.RESET}
   1. Create .env file: {Colors.CYAN}cp .env.example .env{Colors.RESET}

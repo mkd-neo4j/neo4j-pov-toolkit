@@ -38,17 +38,3 @@ env/
 # OS
 .DS_Store
 Thumbs.db
-
-# Workspace - User data and generated code
-# Keep directory structure but not user's actual files
-
-# User's raw data files
-workspace/raw_data/*.csv
-workspace/raw_data/*.json
-workspace/raw_data/*.txt
-workspace/raw_data/*.parquet
-!workspace/raw_data/.gitkeep
-
-# Generated code (user can commit if they want)
-workspace/generated/*.py
-!workspace/generated/data_mapper.py

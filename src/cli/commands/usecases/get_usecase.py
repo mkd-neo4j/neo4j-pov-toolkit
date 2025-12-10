@@ -44,15 +44,15 @@ def setup_parser(subparsers):
     """Setup argument parser for get-usecase command"""
     parser = subparsers.add_parser(
         'get-usecase',
-        help='Fetch a use case page and convert it to markdown'
+        help='Fetch a Neo4j use case page from neo4j.com and convert it to markdown format'
     )
     parser.add_argument(
         'url',
-        help='URL of the use case page to fetch'
+        help='Full URL of the Neo4j use case page (e.g., https://neo4j.com/use-cases/fraud-detection/)'
     )
     parser.add_argument(
         '--output', '-o',
-        help='Output file path (if not specified, prints to stdout)'
+        help='Save markdown to file instead of printing to stdout (e.g., usecase.md)'
     )
     parser.set_defaults(func=execute)
     return parser

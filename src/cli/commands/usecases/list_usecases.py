@@ -98,22 +98,22 @@ def setup_parser(subparsers):
     """Setup argument parser for list-usecases command"""
     parser = subparsers.add_parser(
         'list-usecases',
-        help='List available Neo4j use cases from the website'
+        help='List all available Neo4j use cases by scraping neo4j.com/use-cases'
     )
     parser.add_argument(
         '--json',
         action='store_true',
-        help='Output as JSON'
+        help='Output as JSON format instead of tree view'
     )
     parser.add_argument(
         '--urls-only',
         action='store_true',
-        help='Output only URLs (useful for passing to LLM)'
+        help='Output only URLs, one per line (useful for passing to LLM or scripting)'
     )
     parser.add_argument(
         '--verbose', '-v',
         action='store_true',
-        help='Show URLs alongside use case names'
+        help='Show URLs alongside use case names in tree view'
     )
     parser.set_defaults(func=execute)
     return parser
