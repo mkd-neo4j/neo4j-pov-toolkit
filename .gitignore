@@ -51,4 +51,4 @@ workspace/raw_data/*.parquet
 
 # Generated code (user can commit if they want)
 workspace/generated/*.py
-!workspace/generated/.gitkeep
+!workspace/generated/data_mapper.py
