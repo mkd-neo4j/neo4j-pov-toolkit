@@ -1,0 +1,54 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Workspace - User data and generated code
+# Keep directory structure but not user's actual files
+
+# User's raw data files
+workspace/raw_data/*.csv
+workspace/raw_data/*.json
+workspace/raw_data/*.txt
+workspace/raw_data/*.parquet
+!workspace/raw_data/.gitkeep
+
+# Generated code (user can commit if they want)
+workspace/generated/*.py
+!workspace/generated/.gitkeep
