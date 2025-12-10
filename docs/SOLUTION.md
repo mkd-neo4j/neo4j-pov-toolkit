@@ -9,7 +9,7 @@ The Neo4j Demo Toolkit is an LLM-powered code generation system that transforms 
 ## Architecture Philosophy
 
 ### What the LLM Generates
-- **One file**: `src/data_mapper.py`
+- **One file**: `workspace/generated/data_mapper.py`
 - **One purpose**: Translate raw CSV/JSON data into Neo4j-ready structures
 - **Minimal complexity**: Simple, readable Python that maps fields and calls pre-built functions
 
@@ -29,27 +29,36 @@ The Neo4j Demo Toolkit is an LLM-powered code generation system that transforms 
 
 ```
 neo4j-demo-toolkit/
-├── raw_data/                           # User drops their data here
-│   ├── customers.csv
-│   ├── accounts.csv
-│   └── transactions.csv
-│
-├── src/
-│   ├── data_mapper.py                 # ONLY LLM-generated file
-│   │                                   # Easy to find, easy to read
+├── workspace/                          # USER WORKSPACE - Everything you need is here
+│   ├── raw_data/                      # Drop your data files here
+│   │   ├── customers.csv
+│   │   ├── accounts.csv
+│   │   └── transactions.csv
 │   │
-│   └── core/                           # Pre-built infrastructure (hidden)
-│       ├── setup/
-│       │   └── check_neo4j.py         # Validate connection + detect version
-│       │
-│       ├── neo4j/
-│       │   ├── connection.py          # Connection management
-│       │   ├── writer_v4.py           # Neo4j 4.x specific implementation
-│       │   ├── writer_v5.py           # Neo4j 5.x specific implementation
-│       │   └── validator.py           # Data validation utilities
-│       │
-│       ├── logger.py                  # Pre-configured logging
-│       └── utils.py                   # Helper functions
+│   ├── generated/                     # LLM-generated code goes here
+│   │   └── data_mapper.py            # ONLY LLM-generated file
+│   │                                  # Easy to find, easy to read
+│   │
+│   └── README.md                      # Quick start guide for users
+│
+├── src/                                # PRE-BUILT INFRASTRUCTURE (Don't touch)
+│   ├── core/                          # Core functionality
+│   │   ├── setup/
+│   │   │   └── check_neo4j.py        # Validate connection + detect version
+│   │   │
+│   │   ├── neo4j/
+│   │   │   ├── connection.py         # Connection management
+│   │   │   ├── writer_v4.py          # Neo4j 4.x specific implementation
+│   │   │   ├── writer_v5.py          # Neo4j 5.x specific implementation
+│   │   │   └── validator.py          # Data validation utilities
+│   │   │
+│   │   ├── logger.py                 # Pre-configured logging
+│   │   └── utils.py                  # Helper functions
+│   │
+│   └── cli/                           # CLI implementation
+│       ├── main.py                    # CLI entry point
+│       ├── commands/                  # Command implementations
+│       └── utils/                     # CLI utilities
 │
 ├── prompts/                            # Markdown prompts for LLM orchestration
 │   ├── README.md                      # How the prompt system works
@@ -58,13 +67,14 @@ neo4j-demo-toolkit/
 │   ├── 02_analyze_data.md             # Step 2: Understand CSV structure
 │   └── 03_generate_mapper.md          # Step 3: Generate data_mapper.py
 │
-├── config/
-│   └── .env.example                   # Template for user configuration
+├── docs/
+│   ├── WHY.md                         # Why this toolkit exists
+│   └── SOLUTION.md                    # This document
 │
-└── docs/
-    ├── WHY.md                          # Why this toolkit exists
-    └── solution/
-        └── SOLUTION.md                 # This document
+├── cli.py                              # CLI entry point (run this)
+├── .env                                # Your Neo4j credentials
+├── .env.example                        # Template for configuration
+└── requirements.txt                    # Python dependencies
 ```
 
 ## The Single Configuration File
@@ -97,7 +107,7 @@ The LLM needs to know which version it's targeting so it can:
 ### Two-Layer Version Handling
 
 #### Layer 1: LLM Knowledge (Code Generation)
-**When**: Before generating `data_mapper.py`
+**When**: Before generating `workspace/generated/data_mapper.py`
 **Purpose**: Generate version-appropriate Cypher queries
 
 The LLM runs `python src/core/setup/check_neo4j.py` which returns:
@@ -118,7 +128,7 @@ With this information, the LLM knows:
 - "I can use `SET n += {props}` syntax"
 
 #### Layer 2: Runtime Selection (Code Execution)
-**When**: When `data_mapper.py` runs
+**When**: When `workspace/generated/data_mapper.py` runs
 **Purpose**: Use the correct database driver and patterns
 
 The generated code calls:
@@ -165,9 +175,9 @@ SET c += {
 
 Both accomplish the same goal, but use syntax appropriate to the version.
 
-## The LLM-Generated File: `data_mapper.py`
+## The LLM-Generated File: `workspace/generated/data_mapper.py`
 
-This is the **only** file the LLM creates. It's deliberately simple and readable.
+This is the **only** file the LLM creates. It's deliberately simple and readable. It lives in the `workspace/generated/` folder so users know exactly where to find it.
 
 ### Example Generated File
 
@@ -191,7 +201,7 @@ def load_customers():
     writer = get_writer()
 
     customers = []
-    with open('raw_data/customers.csv', 'r') as f:
+    with open('workspace/raw_data/customers.csv', 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             customers.append({
@@ -221,7 +231,7 @@ def load_pii():
     phones = []
     devices = []
 
-    with open('raw_data/pii.csv', 'r') as f:
+    with open('workspace/raw_data/pii.csv', 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row['pii_type'] == 'email':
@@ -733,9 +743,9 @@ Once use case selected proceed to `02_analyze_data.md`
 
 ## Steps
 
-1. **List files in raw_data/**
+1. **List files in workspace/raw_data/**
    ```bash
-   ls raw_data/
+   ls workspace/raw_data/
    ```
 
 2. **Inspect each file**
@@ -788,7 +798,7 @@ Once mapping approved > proceed to `03_generate_mapper.md`
 #### `prompts/03_generate_mapper.md`
 
 ```markdown
-# Generate data_mapper.py
+# Generate workspace/generated/data_mapper.py
 
 **Purpose**: Generate the single Python file that maps raw data to Neo4j.
 
@@ -868,14 +878,14 @@ log.info(f"Created {count} nodes")
 ### Error Handling
 Include basic error handling for missing files:
 ```python
-if not Path('raw_data/customers.csv').exists():
-    log.error("Missing customers.csv in raw_data/")
+if not Path('workspace/raw_data/customers.csv').exists():
+    log.error("Missing customers.csv in workspace/raw_data/")
     return
 ```
 
 ## Output File
 
-Write to: `src/data_mapper.py`
+Write to: `workspace/generated/data_mapper.py`
 
 Include a docstring at the top:
 ```python
@@ -892,15 +902,15 @@ This file maps raw CSV data to the {Use Case} data model:
 ## After Generation
 
 Inform user:
-1. "Generated src/data_mapper.py"
-2. "Run it with: python src/data_mapper.py"
+1. "Generated workspace/generated/data_mapper.py"
+2. "Run it with: python workspace/generated/data_mapper.py"
 3. "This will load your data into Neo4j"
 4. Suggest next steps (example queries, verification)
 
 ## Regeneration
 
 If user wants to modify:
-- They can edit data_mapper.py directly (it's readable)
+- They can edit workspace/generated/data_mapper.py directly (it's readable)
 - Or ask you to regenerate with different parameters
 ```
 
@@ -923,9 +933,9 @@ cp .env.example .env
 ### Step 2: Add Data
 
 ```bash
-# Drop CSVs into raw_data/
-cp ~/my-data/customers.csv raw_data/
-cp ~/my-data/transactions.csv raw_data/
+# Drop CSVs into workspace/raw_data/
+cp ~/my-data/customers.csv workspace/raw_data/
+cp ~/my-data/transactions.csv workspace/raw_data/
 ```
 
 ### Step 3: Start Conversation with LLM
@@ -943,20 +953,20 @@ cp ~/my-data/transactions.csv raw_data/
 - User confirms: "Synthetic Identity"
 
 **LLM**: *[Uses prompts/02_analyze_data.md]*
-- Reads raw_data/ files
+- Reads workspace/raw_data/ files
 - "I see customers.csv with customer_id, email, phone..."
 - "I'll map this to Customer, Email, Phone nodes..."
 - User confirms mapping
 
 **LLM**: *[Uses prompts/03_generate_mapper.md]*
-- Generates `src/data_mapper.py` with Neo4j 5.x syntax
-- "Generated src/data_mapper.py"
-- "Run: python src/data_mapper.py"
+- Generates `workspace/generated/data_mapper.py` with Neo4j 5.x syntax
+- "Generated workspace/generated/data_mapper.py"
+- "Run: python workspace/generated/data_mapper.py"
 
 ### Step 4: Run Ingestion
 
 ```bash
-python src/data_mapper.py
+python workspace/generated/data_mapper.py
 ```
 
 Output:
@@ -988,8 +998,8 @@ LIMIT 10
 **Rationale**: Simpler, more flexible, easier to understand
 
 ### 2. Single Generated File
-**Decision**: LLM generates only `src/data_mapper.py`
-**Rationale**: Easy to find, read, modify, regenerate
+**Decision**: LLM generates only `workspace/generated/data_mapper.py`
+**Rationale**: Easy to find, read, modify, regenerate. Lives in user workspace, not hidden in `src/`
 
 ### 3. Markdown Prompts
 **Decision**: Prompts are .md files, not Python code
@@ -1011,6 +1021,10 @@ LIMIT 10
 **Decision**: User only configures Neo4j connection
 **Rationale**: Minimal friction, minimal decisions
 
+### 8. Workspace Folder
+**Decision**: All user files live in `workspace/` (raw data + generated code)
+**Rationale**: Clear boundary - user never enters `src/`, everything they need is in one place
+
 ## What Gets Built vs What Exists
 
 ### Pre-Built (In Repository)
@@ -1026,15 +1040,15 @@ LIMIT 10
 - `.env.example`
 
 ### User Provides
-- `raw_data/*.csv` (their data)
+- `workspace/raw_data/*.csv` (their data)
 - `.env` (their credentials)
 
 ### LLM Generates
-- `src/data_mapper.py` (single file)
+- `workspace/generated/data_mapper.py` (single file)
 
 ### User Runs
 ```bash
-python src/data_mapper.py
+python workspace/generated/data_mapper.py
 ```
 
 ## Benefits of This Architecture
@@ -1063,7 +1077,7 @@ When Neo4j adds new use cases, they automatically become available.
 
 ### Adding New Data Sources
 
-Extend `data_mapper.py` generation to handle JSON, Parquet, databases.
+Extend `workspace/generated/data_mapper.py` generation to handle JSON, Parquet, databases.
 Pre-build readers in `src/core/readers/`.
 
 ### Adding Validation
