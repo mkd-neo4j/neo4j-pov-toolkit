@@ -14,7 +14,7 @@ logging.basicConfig(
     stream=sys.stdout
 )
 
-log = logging.getLogger('neo4j-demo-toolkit')
+log = logging.getLogger('neo4j-pov-toolkit')
 
 # Usage in generated code:
 # from src.core.logger import log

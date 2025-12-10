@@ -28,7 +28,7 @@ The Neo4j Demo Toolkit is an LLM-powered code generation system that transforms 
 ## Repository Structure
 
 ```
-neo4j-demo-toolkit/
+neo4j-pov-toolkit/
 ├── workspace/                          # USER WORKSPACE - Everything you need is here
 │   ├── raw_data/                      # Drop your data files here
 │   │   ├── customers.csv
@@ -599,7 +599,7 @@ logging.basicConfig(
     stream=sys.stdout
 )
 
-log = logging.getLogger('neo4j-demo-toolkit')
+log = logging.getLogger('neo4j-pov-toolkit')
 
 # Usage in generated code:
 # from src.core.logger import log
