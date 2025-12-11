@@ -1,5 +1,16 @@
 # Use Case Discovery & Matching
 
+> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+>
+> If NO → Read it NOW before proceeding. It contains critical context about:
+> - Your mission and core principles
+> - When to read this file vs others
+> - Essential tools and workflows
+>
+> This supporting prompt assumes you've already read PROMPT.md.
+
+---
+
 **Reference guide for selecting fraud detection use cases from Neo4j's official catalog.**
 
 ---
@@ -225,5 +236,5 @@ Then proceed to check `.env` and `workspace/raw_data/`.
 See also:
 - `../PROMPT.md` - Overall guidance
 - `setup.md` - Connection validation (next step)
-- `analyze_data.md` - Data analysis (after use case selected)
+- `analyze_data.md` - Data quality validation & structure analysis
 - `generate_mapper.md` - Code generation (final step)

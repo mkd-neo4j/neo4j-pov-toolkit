@@ -1,5 +1,16 @@
 # Data Mapper Code Generation
 
+> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+>
+> If NO → Read it NOW before proceeding. It contains critical context about:
+> - Your mission and core principles
+> - When to read this file vs others
+> - Essential tools and workflows
+>
+> This supporting prompt assumes you've already read PROMPT.md.
+
+---
+
 **Reference guide for generating data_mapper.py code that loads data into Neo4j.**
 
 ---
@@ -15,9 +26,57 @@ This ensures:
 
 ---
 
+## MANDATORY: Data Quality Validation First
+
+> **⚠️ CRITICAL**: Before writing ANY code, you MUST validate data quality.
+>
+> **Why**: "You need to do some thinking yourself like what happens when I execute this and there's a column that's broken" - Pedro Leitao
+
+**You cannot write defensive code if you don't know what you're defending against.**
+
+### The Professional Practice
+
+Data engineers and data scientists **always** validate data before production loads:
+
+1. **Check for nulls** - Which required fields have missing values?
+2. **Validate types** - Are integers actually integers? Dates parseable?
+3. **Detect invalid values** - Malformed emails, negative amounts, impossible dates?
+4. **Understand distributions** - Outliers? Suspicious patterns?
+
+### Why This Matters
+
+**"Customer is gonna give you is just a load of shite that you're gonna have to fix yourself"** - Pedro
+
+- Raw customer data is rarely clean
+- LLMs can't analyze 4GB files - need strategic sampling
+- Broken data will crash ingestion code
+- **"It's much, much harder to verify once it gets into Neo4j"** - Pedro
+- Fix issues BEFORE Neo4j, not after
+
+### What to Do
+
+**Read and follow**: [validate_data_quality.md](validate_data_quality.md)
+
+This guide covers:
+- How to sample large files strategically
+- Essential data quality checks (nulls, types, invalid values)
+- Statistical analysis for numerical fields
+- When to proceed vs block code generation
+- How validation findings inform code generation
+
+**After validation**, you'll know:
+- Which fields need null handling
+- What type conversions/parsing are required
+- What cleaning/validation logic to include
+- Expected warnings during load
+
+**Then and only then** proceed to code generation below.
+
+---
+
 ## Critical Pre-Generation Steps
 
-Before generating ANY code, you MUST complete these discovery steps:
+After completing data quality validation, you MUST complete these discovery steps:
 
 ### 1. Discover the Data Model
 

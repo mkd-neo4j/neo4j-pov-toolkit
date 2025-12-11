@@ -1,5 +1,16 @@
 # Connection Setup & Version Detection
 
+> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+>
+> If NO → Read it NOW before proceeding. It contains critical context about:
+> - Your mission and core principles
+> - When to read this file vs others
+> - Essential tools and workflows
+>
+> This supporting prompt assumes you've already read PROMPT.md.
+
+---
+
 **Reference guide for validating Neo4j connections and detecting version information.**
 
 ---

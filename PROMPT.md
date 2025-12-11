@@ -32,82 +32,108 @@ When generating code:
 
 ---
 
-## Tools to add discovery
+## 🛑 CRITICAL: Read Supporting Prompts FIRST
 
-### Supporting Prompts (Detailed Guidance)
-- `src/prompts/setup.md` - Connection validation & version detection
-- `src/prompts/discover_usecase.md` - Use case matching (never invent use cases)
-- `src/prompts/generate_mapper.md` - Code generation API & examples
+**BEFORE responding, read the relevant supporting prompt based on user intent:**
 
-### Tools You Can Use
-- **CLI**: Run `python3 cli.py --help` to discover commands
-  - **CRITICAL**: Always use `python3` (not `python`) - macOS doesn't have `python` aliased
-- **File System**: Check `.env`, `workspace/raw_data/`, read Data files
+| User Intent | You MUST Read First | Why |
+|-------------|---------------------|-----|
+| "Which use cases can I implement?" | `src/prompts/discover_usecase.md` | Contains mandatory verification workflow - you MUST fetch official docs and verify requirements. Never guess based on use case names. |
+| "How do I connect?" / ".env questions" | `src/prompts/setup.md` | Connection validation, version detection steps |
+| "Validate my data" / Before code generation | `src/prompts/validate_data_quality.md` | MANDATORY data quality checks before writing code. You can't write defensive code without knowing what you're defending against. |
+| "Generate code" / "Load my data" | `src/prompts/generate_mapper.md` | Code generation patterns and API. This file also requires you to read validate_data_quality.md first. |
 
-**Read the supporting prompts when you need specific technical details.**
+### Enforcement
 
----
+**If user asks "which use cases can I implement with my data?"**
 
-## What You Can Do
+1. 🛑 **STOP** - Have you read `src/prompts/discover_usecase.md`?
+2. If NO → Read it NOW before responding
+3. Follow the mandatory verification workflow:
+   - Fetch use case URLs with CLI
+   - Get actual documentation for each candidate use case
+   - Extract real data requirements
+   - Compare against user's data
+   - Provide recommendations with evidence
 
-### 1. Explore Use Cases
-User asks: *"What fraud detection use cases are available?"*
-→ Fetch from CLI, present options with descriptions
+**❌ FORBIDDEN**: Recommending use cases based on assumptions, use case names, or training data
 
-### 2. Explain Use Cases
-User asks: *"Tell me about synthetic identity fraud"*
-→ Fetch details, explain data model, show example queries
-
-### 3. Generate Data Loading Code
-User asks: *"Load my data into Neo4j for fraud detection"*
-→ Generate `workspace/generated/data_mapper.py`
-
-**Only generate code when user explicitly wants to load data.**
-
-Otherwise, just provide information, answer questions, or explain use cases.
+**✅ REQUIRED**: Fetch official documentation, verify requirements, show evidence
 
 ---
 
-## If Generating Code
+## Supporting Prompts: Read Before You Act
 
-Only generate `workspace/generated/data_mapper.py` when user wants to load data.
+**CRITICAL**: These files contain detailed, step-by-step instructions for specific workflows. You MUST read the relevant file BEFORE proceeding with that workflow. Do not guess or assume - these files tell you exactly what to do and how to do it.
 
-**Before generating**:
-- ✅ Neo4j connection validated (use CLI to check)
-- ✅ Neo4j version known (4.x vs 5.x determines Cypher syntax)
-- ✅ Use case selected from official Neo4j catalog
-- ✅ Data files analyzed (columns identified, structure understood)
-- ✅ Mapping plan clear (CSV → Graph model)
+### When to Read Each File
 
-**The generated file**:
-- Reads data from `workspace/raw_data/`
-- Maps to selected use case's graph model
-- Calls pre-built writer functions (discover API by reading `src/core/neo4j/`)
-- Uses version-appropriate Cypher syntax
+**`src/prompts/setup.md`** - Connection Validation & Version Detection
 
-**You do NOT write**: Connection code, database drivers, logging (all pre-built)
+**Read this when**:
+- User asks about connecting to Neo4j
+- You need to verify .env configuration
+- Before generating code (need to know Neo4j version for correct Cypher syntax)
 
-**Discover the writer API** by examining source files in `src/core/neo4j/` - don't assume function names.
+**What it provides**:
+- How to check if .env file exists and is configured correctly
+- CLI command to test Neo4j connection (`python3 cli.py neo4j-info`)
+- How to extract and use version information (4.x vs 5.x = different Cypher)
+- What to communicate to users about connection issues
+- Decision flow: when to proceed vs when to block
 
 ---
 
-## Efficient Information Gathering
+**`src/prompts/discover_usecase.md`** - Use Case Discovery & Matching
 
-**User says**: "implement 1st party fraud"
+**Read this when**:
+- User asks "what use cases are available?"
+- User mentions fraud detection but doesn't specify which type
+- You need to match user's informal request to official Neo4j use cases
 
-**First**: Run `python3 cli.py --help` to discover available commands
+**What it provides**:
+- **MANDATORY RULE**: Never invent use cases, only use official Neo4j catalog
+- CLI command to fetch use cases (`python3 cli.py list-usecases`)
+- How to match informal terms (e.g., "1st party fraud") to official names
+- When to present options vs when match is clear
+- What to do when no match exists (present available options, don't make up new ones)
 
-**Then** (silently gather):
-1. Use CLI to get use cases → Find matching use case
-2. `ls .env` → Check credentials exist
-3. `ls workspace/raw_data/` → Check for data files
-4. If `.env` exists: Use CLI to check Neo4j connection and get version
+---
 
-**Then respond** with what you found:
-- ✅ Things that are ready
-- ❌ Things that are missing (ask for these)
+**`src/prompts/validate_data_quality.md`** - Data Quality Validation Before Code Generation
 
-**Batch all missing items** into one message.
+**Read this when**:
+- Before generating ANY data loading code
+- User provides data files in `workspace/raw_data/`
+- You need to understand data structure, nulls, type mismatches
+
+**What it provides**:
+- **MANDATORY PROFESSIONAL PRACTICE**: Validate data quality BEFORE writing code
+- How to strategically sample large files (4GB+) for validation
+- Essential checks: nulls, type mismatches, invalid values, distributions
+- How to report findings to users (what's broken, what needs cleaning)
+- Decision criteria: when to proceed vs when to block code generation
+- How validation findings inform defensive code generation
+- **Key insight**: "You can't write defensive code if you don't know what you're defending against"
+
+---
+
+**`src/prompts/generate_mapper.md`** - Code Generation for Data Loading
+
+**Read this when**:
+- User wants to load/import data into Neo4j
+- You're ready to generate `workspace/generated/data_mapper.py`
+- After completing: use case selection, data validation, connection check
+
+**What it provides**:
+- **Discovery-based generation**: Read toolkit source code to learn current API (don't assume)
+- Critical pre-generation steps (discover data model, query API, analyze data)
+- **MANDATORY**: Data quality validation must happen first (references validate_data_quality.md)
+- Required code structure (path setup, imports, batching patterns)
+- How to map source data → use case data model (strict adherence required)
+- Cypher query patterns for batched operations
+- Progress logging and error handling patterns
+- Common mistakes to avoid
 
 ---
 
@@ -118,7 +144,3 @@ Only generate `workspace/generated/data_mapper.py` when user wants to load data.
 **Strategy**: Discover → Analyze → Ask (if blocked) → Respond (info or code)
 
 **Constraint**: Use cases from Neo4j only, never make them up
-
-**Output options**:
-- Information/explanation (most requests)
-- `workspace/generated/data_mapper.py` (when loading data)

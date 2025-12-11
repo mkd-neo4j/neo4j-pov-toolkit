@@ -1,44 +1,78 @@
-# Data Analysis Before Code Generation
+# Data Quality Validation Before Code Generation
 
-**Reference guide for analyzing raw data quality and structure before generating data mapper code.**
+> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+>
+> If NO → Read it NOW before proceeding. It contains critical context about:
+> - Your mission and core principles
+> - When to read this file vs others
+> - Essential tools and workflows
+>
+> This supporting prompt assumes you've already read PROMPT.md.
 
 ---
 
-## Philosophy: Validate Before You Load
+**Reference guide for validating raw data quality and structure before generating data mapper code.**
+
+---
+
+## Philosophy: This is What Professionals Do
 
 > **"You need to do some thinking yourself like what happens when I execute this and there's a column that's broken, right?"** - Pedro Leitao
 
-Before generating any data loading code, you MUST understand:
+### The Professional Standard: Validate → Transform → Load
+
+**Data engineers and data scientists ALWAYS validate data quality before production loads.** This is not optional. This is not "analysis for fun." This is the standard professional practice.
+
+**Why**:
+1. **You can't write defensive code if you don't know what you're defending against**
+2. **"Customer is gonna give you is just a load of shite that you're gonna have to fix yourself"** - Pedro
+3. **"It's much, much harder to verify once it gets into Neo4j"** - Pedro
+4. **Fix issues BEFORE Neo4j, not after** - debugging in a graph database is a nightmare
+
+### What You MUST Understand Before Code Generation
+
 - **Data Quality**: Are there nulls, invalid values, or type mismatches?
 - **Data Shape**: What are the distributions, outliers, and patterns?
 - **Data Compatibility**: Does this data actually match the use case requirements?
+- **Transformation Requirements**: What cleaning, parsing, and validation is needed?
 
-**Why This Matters**:
-- LLMs can't analyze 4GB files - you need strategic sampling
-- Broken data will crash the ingestion code
-- Understanding data characteristics helps adapt transformations
-- Catching issues BEFORE Neo4j prevents debugging nightmares
+### The Reality of Customer Data
 
-**This toolkit "sits on shoulders of giants"** - it adapts messy data to proven, battle-tested Neo4j data models. Data analysis ensures that adaptation is correct.
+**"LLMs can't look at the file that's 4 gigabytes"** - Pedro
+
+You need strategic sampling and validation because:
+- Customer data is rarely clean (expect nulls, wrong types, invalid values)
+- Files can be massive (4GB+, millions of rows)
+- Broken data will crash ingestion code during execution
+- Catching issues early prevents hours of debugging later
+
+### This Toolkit "Sits on Shoulders of Giants"
+
+**The toolkit's job**: Transform messy customer data → Proven Neo4j data models
+
+- Neo4j use cases are battle-tested and authoritative
+- Data quality validation ensures messy data CAN fit the proven model
+- Code generation adapts the shite data to the clean model
+- **Validation is the bridge between reality and the ideal**
 
 ---
 
-## When to Run Data Analysis
+## When to Run Data Quality Validation
 
-**ALWAYS analyze data before code generation when**:
+**ALWAYS validate data before code generation when**:
 1. User provides new/unknown data files
 2. Use case has strict requirements (data types, required fields)
 3. Data comes from unsophisticated sources (likely to be "a load of shite")
 4. Previous loads failed or had warnings
 
-**You can SKIP analysis when**:
-1. Regenerating code for already-analyzed data
-2. User explicitly says "skip analysis, just generate code"
+**You can SKIP validation when**:
+1. Regenerating code for already-validated data
+2. User explicitly says "skip validation, just generate code"
 3. Working with known, clean example datasets
 
 ---
 
-## Core Analysis Steps
+## Core Validation Steps
 
 ### 1. File Discovery & Format Detection
 
@@ -306,20 +340,20 @@ def sample_large_file(file_path, sample_size=1000):
 
 **Inform user of sampling**:
 ```
-📊 Analyzing large file (2.3 GB, ~5M rows)
-Using stratified sample of 10,000 rows for analysis...
+📊 Validating large file (2.3 GB, ~5M rows)
+Using stratified sample of 10,000 rows for validation...
 ```
 
 ---
 
-## Analysis Report Format
+## Validation Report Format
 
 **Present findings clearly to user**:
 
 ```markdown
-## Data Analysis Report
+## Data Quality Validation Report
 
-### Files Analyzed
+### Files Validated
 - customers.csv (512 KB, 10,000 rows)
 - transactions.json (2.3 MB, 50,000 records)
 
@@ -420,7 +454,7 @@ Generate data_mapper.py with:
 
 ## Integration with Code Generation
 
-**After analysis, pass findings to generate_mapper.md**:
+**After validation, pass findings to generate_mapper.md**:
 
 1. **Field Mapping**:
    - Source field → Use case property mappings
@@ -437,7 +471,7 @@ Generate data_mapper.py with:
 
 **Example handoff**:
 ```python
-# Analysis findings inform code generation:
+# Validation findings inform code generation:
 mappings = {
     'customer_id': ('Customer', 'customerId', str),
     'email': ('Email', 'address', str, validate_email),
@@ -455,16 +489,16 @@ null_handling = {
 
 ## Key Principles
 
-### From Pedro's Insights:
+### The Professional Standard (From Pedro's Insights)
 
 1. **"LLMs can't look at 4GB files"**
    - Use strategic sampling
-   - Analyze structure, not every row
+   - Validate structure, not every row
    - Report findings clearly
 
 2. **"Customer data will be a load of shite"**
    - Expect nulls, wrong types, invalid values
-   - Build defensive code from analysis findings
+   - Build defensive code from validation findings
    - Transform data to proven model format
 
 3. **"Fix it before Neo4j"**
@@ -474,18 +508,18 @@ null_handling = {
 
 4. **"Sits on shoulders of giants"**
    - Use case data model is proven and authoritative
-   - Analysis ensures data CAN fit that model
+   - Validation ensures data CAN fit that model
    - Code generation adapts messy data to clean model
 
 ### Remember:
 > **"What happens when I execute this and there's a column that's broken?"**
 
-Data analysis answers this question BEFORE the code runs.
+Data quality validation answers this question BEFORE the code runs.
 
 ---
 
 ## See Also
 
-- `generate_mapper.md` - Uses analysis findings to generate code
+- `generate_mapper.md` - Uses validation findings to generate code
 - `discover_usecase.md` - Defines required fields and data model
-- Working example: Sample data analysis before generation
+- Working example: Sample data quality validation before generation
