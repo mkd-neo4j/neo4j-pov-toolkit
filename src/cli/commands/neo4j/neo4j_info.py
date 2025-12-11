@@ -1,7 +1,42 @@
 """
-neo4j-info command
+neo4j-info CLI Command - Comprehensive Connection Details
 
-Show comprehensive Neo4j connection information.
+Purpose:
+    Displays detailed information about the Neo4j database connection including version,
+    edition, supported Cypher versions, and connection parameters. More comprehensive
+    than neo4j-test, which only validates connectivity.
+
+Command Usage:
+    python cli.py neo4j-info                         # Pretty formatted output
+    python cli.py neo4j-info --json                  # JSON output for LLMs
+
+When LLMs Should Use This:
+    - When user asks about their Neo4j version
+    - Before generating Cypher code (to check version compatibility)
+    - To determine if Enterprise features are available
+    - When troubleshooting version-specific issues
+
+Information Provided:
+    ✓ Neo4j version (e.g., "5.18.0")
+    ✓ Supported Cypher versions (for syntax compatibility)
+    ✓ Edition (Community vs Enterprise)
+    ✓ Connection URI and database name
+    ✓ Connection status
+
+Why This Matters:
+    - Different Neo4j versions have different Cypher syntax
+    - Enterprise vs Community affects available features
+    - LLMs need version info to generate compatible code
+    - Version 4.x vs 5.x vs 6.x have significant differences
+
+Comparison with neo4j-test:
+    - neo4j-test: Quick yes/no connectivity check
+    - neo4j-info: Detailed version and configuration information
+    - Use neo4j-test first, then neo4j-info for details
+
+Return Codes:
+    0 - Successfully connected and retrieved information
+    1 - Connection failed (check credentials or Neo4j availability)
 """
 
 import os

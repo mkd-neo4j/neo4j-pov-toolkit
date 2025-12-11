@@ -54,6 +54,20 @@ def main():
       Options:
         --output, -o  Save to file instead of stdout
 
+  {Colors.CYAN}list-datamodels{Colors.RESET} [--json] [--urls-only] [--verbose]
+      List all available Neo4j data models by scraping neo4j.com/developer/industry-use-cases
+      Options:
+        --json        Output as JSON format
+        --urls-only   Output only URLs (for LLM/scripting)
+        --verbose     Show URLs in tree view
+
+  {Colors.CYAN}get-datamodel{Colors.RESET} <URL> [--output FILE]
+      Fetch a Neo4j data model page from neo4j.com and convert to markdown
+      Required:
+        URL           Full Neo4j data model page URL
+      Options:
+        --output, -o  Save to file instead of stdout
+
 {Colors.BOLD}Examples:{Colors.RESET}
   python cli.py neo4j-test                                    Test connection
   python cli.py neo4j-test --verbose                          Detailed test
@@ -62,6 +76,9 @@ def main():
   python cli.py list-usecases --urls-only                     Get URLs for LLM
   python cli.py get-usecase https://neo4j.com/use-cases/...   Fetch use case as markdown
   python cli.py get-usecase <URL> -o usecase.md               Save to file
+  python cli.py list-datamodels                               Show data model hierarchy
+  python cli.py list-datamodels --urls-only                   Get data model URLs for LLM
+  python cli.py get-datamodel <URL> -o datamodel.md           Fetch data model as markdown
 
 {Colors.BOLD}Getting Started:{Colors.RESET}
   1. Create .env file: {Colors.CYAN}cp .env.example .env{Colors.RESET}
