@@ -38,7 +38,7 @@ When generating code:
 
 | User Intent | You MUST Read First | Why |
 |-------------|---------------------|-----|
-| "Which use cases can I implement?" | `src/prompts/discover_usecase.md` | Contains mandatory verification workflow - you MUST fetch official docs and verify requirements. Never guess based on use case names. |
+| "Which use cases can I implement?" | `src/prompts/discover_usecase.md` | Contains mandatory two-step CLI workflow: (1) list-usecases to get URLs, (2) get-usecase to fetch details. You MUST use BOTH commands and never construct URLs manually. |
 | "How do I connect?" / ".env questions" | `src/prompts/setup.md` | Connection validation, version detection steps |
 | "Validate my data" / Before code generation | `src/prompts/validate_data_quality.md` | MANDATORY data quality checks before writing code. You can't write defensive code without knowing what you're defending against. |
 | "Generate code" / "Load my data" | `src/prompts/generate_mapper.md` | Code generation patterns and API. This file also requires you to read validate_data_quality.md first. |
@@ -49,16 +49,19 @@ When generating code:
 
 1. 🛑 **STOP** - Have you read `src/prompts/discover_usecase.md`?
 2. If NO → Read it NOW before responding
-3. Follow the mandatory verification workflow:
-   - Fetch use case URLs with CLI
-   - Get actual documentation for each candidate use case
-   - Extract real data requirements
+3. Follow the mandatory two-step CLI workflow:
+   - Step 1: `python3 cli.py list-usecases` to get official URLs
+   - Step 2: `python3 cli.py get-usecase <URL>` for each candidate use case
+   - Extract real data requirements from the fetched documentation
    - Compare against user's data
    - Provide recommendations with evidence
 
-**❌ FORBIDDEN**: Recommending use cases based on assumptions, use case names, or training data
+**❌ FORBIDDEN**:
+- Recommending use cases based on assumptions, use case names, or training data
+- Constructing or guessing use case URLs manually
+- Using only list-usecases without fetching the actual use case details
 
-**✅ REQUIRED**: Fetch official documentation, verify requirements, show evidence
+**✅ REQUIRED**: Use both CLI commands (list then get), fetch official documentation, verify requirements, show evidence
 
 ---
 
@@ -90,13 +93,18 @@ When generating code:
 - User asks "what use cases are available?"
 - User mentions fraud detection but doesn't specify which type
 - You need to match user's informal request to official Neo4j use cases
+- Before implementing any use case pattern
 
 **What it provides**:
 - **MANDATORY RULE**: Never invent use cases, only use official Neo4j catalog
-- CLI command to fetch use cases (`python3 cli.py list-usecases`)
+- **Two-step CLI workflow** (you MUST use BOTH steps):
+  1. `python3 cli.py list-usecases` - Get official URLs
+  2. `python3 cli.py get-usecase <URL>` - Fetch detailed documentation
+- **CRITICAL**: Never construct or guess URLs - only use URLs from list-usecases
 - How to match informal terms (e.g., "1st party fraud") to official names
 - When to present options vs when match is clear
 - What to do when no match exists (present available options, don't make up new ones)
+- How use cases relate to data models (list-datamodels, get-datamodel commands)
 
 ---
 
