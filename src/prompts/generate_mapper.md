@@ -217,22 +217,41 @@ def create_<NodeType>_nodes(query, data):
         for record in data
     ]
 
-    # Use discovered run_batched() pattern
+    # Use discovered batching pattern with progress logging
     cypher = """
     UNWIND $batch AS row
     MERGE (n:<NodeType> {requiredProperty: row.required_property})
     SET n.optionalProperty = row.optional_property
     """
 
-    query.run_batched(cypher, node_data, batch_size=1000)
-    log.info(f"Created {len(node_data)} <NodeType> nodes")
+    # Process in batches with progress logging
+    batch_size = 1000
+    total_records = len(node_data)
+    log_interval = max(50000, batch_size * 10)  # Log every 50k records or 10 batches, whichever is larger
+
+    for i in range(0, total_records, batch_size):
+        batch = node_data[i:i + batch_size]
+        query.run(cypher, {'batch': batch})
+
+        # Log progress periodically for large datasets
+        records_processed = min(i + batch_size, total_records)
+        if records_processed % log_interval == 0 or records_processed == total_records:
+            progress_pct = (records_processed / total_records) * 100
+            log.info(f"  Progress: {records_processed:,} / {total_records:,} records ({progress_pct:.1f}%)")
+
+    log.info(f"✓ Created {len(node_data):,} <NodeType> nodes")
 ```
 
 **Pattern requirements** (discovered from query.py):
 - Must use `UNWIND $batch AS row`
 - Use MERGE on unique identifier property
 - Use SET for other properties
-- Call `query.run_batched(cypher, data, batch_size=1000)`
+- Implement manual batching loop with `query.run()` for progress visibility
+- Log progress every 50,000 records (or configurable interval) to show the load is progressing
+- Use formatted numbers with commas (`:,`) for better readability
+
+**Why Manual Batching Instead of run_batched()**:
+The `query.run_batched()` method only logs at DEBUG level, which means users won't see progress for large datasets. For loads with hundreds of thousands or millions of records, implement your own batching loop with INFO-level progress logging to prevent the appearance of a frozen process.
 
 ### 5. Relationship Creation Functions
 
@@ -265,8 +284,22 @@ def create_<RELATIONSHIP>_relationships(query, data):
     MERGE (source)-[:<RELATIONSHIP>]->(target)
     """
 
-    query.run_batched(cypher, rel_data, batch_size=1000)
-    log.info(f"Created {len(rel_data)} <RELATIONSHIP> relationships")
+    # Process in batches with progress logging
+    batch_size = 1000
+    total_records = len(rel_data)
+    log_interval = max(50000, batch_size * 10)  # Log every 50k records or 10 batches, whichever is larger
+
+    for i in range(0, total_records, batch_size):
+        batch = rel_data[i:i + batch_size]
+        query.run(cypher, {'batch': batch})
+
+        # Log progress periodically for large datasets
+        records_processed = min(i + batch_size, total_records)
+        if records_processed % log_interval == 0 or records_processed == total_records:
+            progress_pct = (records_processed / total_records) * 100
+            log.info(f"  Progress: {records_processed:,} / {total_records:,} relationships ({progress_pct:.1f}%)")
+
+    log.info(f"✓ Created {len(rel_data):,} <RELATIONSHIP> relationships")
 ```
 
 ### 6. Main Execution Function
@@ -403,7 +436,7 @@ Use Case Model → Source Data:
 - Create create_email_nodes() - maps to Email label
 - Create create_phone_nodes() - maps to Phone label
 - Create relationship functions using discovered API
-- Use discovered query.run_batched() pattern
+- Use manual batching loop with progress logging (see section 4 for pattern)
 - Include try/finally cleanup
 
 **Result**: Working code that follows toolkit patterns and use case data model exactly.
@@ -444,6 +477,27 @@ MERGE (n:Customer {id: $id})  # Missing UNWIND $batch!
 ```
 
 **✅ Instead**: Use `UNWIND $batch AS row` pattern from query.py docs
+
+### ❌ Mistake 5: No Progress Logging for Large Datasets
+```python
+# DON'T use run_batched() without progress logging
+query.run_batched(cypher, node_data, batch_size=1000)  # User sees no progress for millions of records!
+```
+
+**✅ Instead**: Implement manual batching loop with periodic progress logging
+```python
+# Log progress every 50k records
+for i in range(0, len(node_data), batch_size):
+    batch = node_data[i:i + batch_size]
+    query.run(cypher, {'batch': batch})
+
+    records_processed = min(i + batch_size, len(node_data))
+    if records_processed % 50000 == 0 or records_processed == len(node_data):
+        progress_pct = (records_processed / len(node_data)) * 100
+        log.info(f"  Progress: {records_processed:,} / {len(node_data):,} records ({progress_pct:.1f}%)")
+```
+
+**Why**: The `run_batched()` method logs only at DEBUG level. For datasets with hundreds of thousands or millions of records, users need to see progress to know the load isn't frozen.
 
 ---
 
@@ -487,8 +541,9 @@ def verify_load(query):
 3. **Include path setup** at top of generated script
 4. **Use discovered API** (don't assume function names)
 5. **Adapt data reading** to actual format (CSV, JSON, etc.)
-6. **Log progress** at each step
-7. **Clean up resources** in finally block
+6. **Log progress** at each step, especially during bulk data loading
+7. **Implement progress logging** for large datasets (manual batching loop with periodic updates)
+8. **Clean up resources** in finally block
 
 ### Never Do:
 1. ❌ Hard-code toolkit API assumptions
@@ -496,6 +551,7 @@ def verify_load(query):
 3. ❌ Invent custom data models
 4. ❌ Skip path setup boilerplate
 5. ❌ Forget to close connections
+6. ❌ Use `run_batched()` without visible progress for large datasets
 
 ### Discovery Sources:
 - Use case markdown → Data model (authoritative)
