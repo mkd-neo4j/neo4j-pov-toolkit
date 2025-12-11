@@ -123,27 +123,47 @@ Neo4j use cases are battle-tested with:
 
 ### 1. Path Setup (REQUIRED)
 
-**ALWAYS start with this pattern** (adapt from working example):
+**ALWAYS start with this pattern**:
 
 ```python
 # Setup Python path to find toolkit modules
 import sys
 from pathlib import Path
 
-# Get project root (2 levels up from this script)
+# Get project root (3 levels up from this script)
+# workspace/generated/data_mapper.py -> workspace/generated/ -> workspace/ -> project_root/
 script_path = Path(__file__).resolve()
 project_root = script_path.parent.parent.parent
 sys.path.insert(0, str(project_root))
 ```
 
-**Why**:
+**Directory Structure Context**:
+```
+neo4j-demo-toolkit/              <- project root (where src/ lives)
+├── src/                         <- toolkit source code
+│   └── core/
+│       └── neo4j/
+├── workspace/
+│   ├── raw_data/
+│   │   └── data.csv
+│   └── generated/
+│       └── data_mapper.py       <- your script lives here
+```
+
+**Path Traversal from data_mapper.py**:
+- `script_path.parent` = `workspace/generated/`
+- `script_path.parent.parent` = `workspace/`
+- `script_path.parent.parent.parent` = `neo4j-demo-toolkit/` (project root) ✅
+
+**Why This Matters**:
 - Makes script runnable from any directory
 - Ensures `from src.*` imports work correctly
 - Must come BEFORE any toolkit imports
+- **CRITICAL**: Use exactly 3 `.parent` calls for project root
 
-**Where to learn this**:
-- Read existing `workspace/generated/data_mapper.py`
-- See working pattern in action
+**Validation Tip**:
+If you see `ModuleNotFoundError: No module named 'src'`, the path setup is wrong.
+The correct pattern is always `.parent.parent.parent` (3 levels) for scripts in `workspace/generated/`.
 
 ### 2. Import Order (REQUIRED)
 
