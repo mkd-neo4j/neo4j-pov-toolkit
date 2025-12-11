@@ -1,4 +1,7 @@
 """
+Use via the root cli.py entry point ONLY.
+Invoke from project root: python cli.py get-usecase <URL>
+
 get-usecase command
 
 Fetch a Neo4j use case page and convert it to markdown format.

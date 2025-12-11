@@ -1,4 +1,7 @@
 """
+Use via the root cli.py entry point ONLY.
+Invoke from project root: python cli.py list-usecases
+
 list-usecases command
 
 List Neo4j use cases from the website in various formats.

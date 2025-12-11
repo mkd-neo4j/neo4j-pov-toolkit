@@ -1,4 +1,7 @@
 """
+Use via the root cli.py entry point ONLY.
+Invoke from project root: python cli.py neo4j-info
+
 neo4j-info command
 
 Show comprehensive Neo4j connection information.

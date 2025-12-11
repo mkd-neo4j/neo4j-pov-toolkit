@@ -1,4 +1,7 @@
 """
+Use via the root cli.py entry point ONLY.
+Invoke from project root: python cli.py <command>
+
 Neo4j PoV Toolkit - Main CLI Logic
 
 Handles argument parsing, command routing, and global flags.
