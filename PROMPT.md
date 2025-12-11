@@ -40,7 +40,8 @@ When generating code:
 - `src/prompts/generate_mapper.md` - Code generation API & examples
 
 ### Tools You Can Use
-- **CLI**: Run `python cli.py --help` to discover commands
+- **CLI**: Run `python3 cli.py --help` to discover commands
+  - **CRITICAL**: Always use `python3` (not `python`) - macOS doesn't have `python` aliased
 - **File System**: Check `.env`, `workspace/raw_data/`, read Data files
 
 **Read the supporting prompts when you need specific technical details.**
@@ -94,7 +95,7 @@ Only generate `workspace/generated/data_mapper.py` when user wants to load data.
 
 **User says**: "implement 1st party fraud"
 
-**First**: Run `python cli.py --help` to discover available commands
+**First**: Run `python3 cli.py --help` to discover available commands
 
 **Then** (silently gather):
 1. Use CLI to get use cases → Find matching use case

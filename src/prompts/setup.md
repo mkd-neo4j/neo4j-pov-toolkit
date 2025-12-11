@@ -51,7 +51,7 @@ ON MATCH SET n.firstName = $firstName, n.lastName = $lastName
 
 ### CLI Command
 ```bash
-python cli.py neo4j-info
+python3 cli.py neo4j-info
 ```
 
 ### What It Returns
@@ -116,7 +116,7 @@ User requests help
     ↓
 Check: .env exists?
     ↓
-  YES → Run: python cli.py neo4j info
+  YES → Run: python3 cli.py neo4j-info
     ↓
   SUCCESS → Store version info, proceed
     ↓
@@ -168,7 +168,7 @@ Be helpful. Suggest common fixes.
 
 ### Your Actions
 1. Check .env: `ls .env`
-2. If exists: `python cli.py neo4j info`
+2. If exists: `python3 cli.py neo4j-info`
 3. Store version: "5.15.0", Cypher "23"
 
 ### Your Response
@@ -184,7 +184,7 @@ Ready to help load your data. What use case are you implementing?
 
 - **Always check connection before generating code**
 - **Version determines Cypher syntax** (5.x vs 4.x are different)
-- **CLI provides version info**: `python cli.py neo4j info`
+- **CLI provides version info**: `python3 cli.py neo4j-info`
 - **.env is required**: Check for it first
 - **Pre-built infrastructure handles runtime**: You just need version for code generation
 - **Communicate clearly**: Tell user what's wrong and how to fix it

@@ -16,6 +16,41 @@ import os
 from pathlib import Path
 
 
+def ensure_python3():
+    """
+    Ensure the script is running with Python 3, not Python 2.
+
+    Purpose:
+        On macOS and many Linux systems, 'python' may not exist or point to python2.
+        LLMs often invoke scripts with 'python cli.py' which can fail.
+
+    Solution:
+        If invoked with Python 2 (version < 3.0), re-exec with python3.
+
+    Why This Exists:
+        Common LLM problem: "python cli.py" fails on macOS with "command not found"
+        Defensive fix: Detect Python 2 and auto-correct to python3
+
+    How It Works:
+        1. Check if running Python 2 (sys.version_info[0] < 3)
+        2. If yes, use os.execvp to replace this process with python3
+        3. Passes all original arguments to python3 version
+    """
+    if sys.version_info[0] < 3:
+        # We're running on Python 2, try to re-exec with python3
+        try:
+            # Re-run this script with python3
+            python3_path = 'python3'
+            args = [python3_path, __file__] + sys.argv[1:]
+            # Replace current process with python3 version
+            os.execvp(python3_path, args)
+        except Exception:
+            # If python3 isn't available, print error and exit
+            print("Error: This toolkit requires Python 3.6+", file=sys.stderr)
+            print("Please run with: python3 cli.py", file=sys.stderr)
+            sys.exit(1)
+
+
 def auto_detect_venv():
     """
     Automatically detect and activate a virtual environment if not already in one.
@@ -99,7 +134,10 @@ def auto_detect_venv():
 
 
 if __name__ == '__main__':
-    # Attempt to auto-detect and activate venv before importing anything
+    # First, ensure we're running Python 3 (not Python 2)
+    ensure_python3()
+
+    # Then attempt to auto-detect and activate venv before importing anything
     auto_detect_venv()
 
     from src.cli.main import main

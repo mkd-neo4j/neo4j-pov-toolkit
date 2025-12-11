@@ -13,7 +13,7 @@
 - Create custom use cases not in Neo4j catalog
 
 ### ✅ ALWAYS Do This:
-- Fetch use cases from `python cli.py list-usecases`
+- Fetch use cases from `python3 cli.py list-usecases`
 - Match user's request to **official Neo4j use cases only**
 - If no match, present available options to user
 
@@ -39,7 +39,7 @@
 
 ### CLI Command
 ```bash
-python cli.py list-usecases
+python3 cli.py list-usecases
 ```
 
 ### What It Returns
@@ -82,7 +82,7 @@ Users rarely use exact Neo4j terminology. Examples:
 
 **You discover**:
 ```bash
-python cli.py list-usecases
+python3 cli.py list-usecases
 # Returns: "Synthetic Identity Fraud Detection"
 ```
 
@@ -187,7 +187,7 @@ Confirm, explain what it means, proceed.
 **User**: "I want to detect 1st party fraud with my customer data"
 
 **You do**:
-1. `python cli.py list-usecases`
+1. `python3 cli.py list-usecases`
 2. Search for "1st party" or "first party"
 3. Find: "First-Party Fraud Detection"
 

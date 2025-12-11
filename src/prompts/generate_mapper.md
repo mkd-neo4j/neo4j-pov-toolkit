@@ -21,7 +21,7 @@ Before generating ANY code, you MUST complete these discovery steps:
 
 ### 1. Discover the Data Model
 
-**Source**: Use case markdown from CLI (`python cli.py get-usecase <URL>`)
+**Source**: Use case markdown from CLI (`python3 cli.py get-usecase <URL>`)
 
 **Extract**:
 - Node labels (e.g., `Customer`, `Email`, `Phone`)
@@ -407,7 +407,7 @@ RETURN n
 **Step 1: Get Use Case Data Model**
 ```bash
 # Run CLI to get use case details
-python cli.py get-usecase https://neo4j.com/...synthetic-identity-fraud/
+python3 cli.py get-usecase https://neo4j.com/...synthetic-identity-fraud/
 
 # Extract from markdown:
 Nodes: Customer (customerId), Email (address), Phone (phoneNumber)
