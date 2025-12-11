@@ -12,9 +12,10 @@ And within minutes, you should have your answer.
 
 ## The Problem
 
-You have a business problem to solve. Maybe it's detecting fraudulent transactions, preventing account takeovers, or identifying synthetic identities. You know Neo4j could help, but there's a gap between *"I have data in a CSV/Database"* and *"I have a working Neo4j solution."*
+You have a business problem to solve. Maybe it's detecting fraud, optimizing supply chains, analyzing patient networks, understanding customer journeys, or managing complex infrastructure. You know Neo4j could help, but there's a gap between *"I have data in a CSV/Database"* and *"I have a working Neo4j solution."*
 
 That gap is filled with questions:
+- What Neo4j use cases are relevant to my industry and data?
 - How do I model this data as a graph?
 - What should be nodes? What should be relationships?
 - How do I write the ingestion code?
@@ -29,9 +30,9 @@ Currently, it takes too long. Days or weeks of learning, modeling, coding, and i
 
 Imagine this workflow:
 
-1. You arrive with a business problem: *"I want to detect synthetic identity fraud"*
-2. You select that use case from our catalog
-3. You provide your data: *"Here's a CSV with customer IDs and PII information"*
+1. You arrive with a business problem: *"I want to optimize my supply chain"* or *"I need to detect fraud"* or *"I want to understand patient care networks"*
+2. The toolkit helps you discover which Neo4j use cases match your needs
+3. You provide your data: *"Here's a CSV with my transactions/relationships/entities"*
 4. You run one command
 5. Minutes later, you have a working Neo4j database with your data loaded, modeled correctly, and ready to query
 
@@ -54,14 +55,14 @@ No graph expertise required. No data modeling degree needed. No days of trial an
 ## What This Solves
 
 ### 1. **The Data Modeling Problem**
-You don't need to know how to model data as a graph. Neo4j has already created [production-ready common data models](https://neo4j.com/developer/industry-use-cases/data-models/) for key use cases:
-- Transaction monitoring
-- Account takeover detection
-- Synthetic identity fraud
-- Automated facial recognition fraud
-- Fraud rings
+You don't need to know how to model data as a graph. Neo4j has already created [production-ready common data models](https://neo4j.com/developer/industry-use-cases/data-models/) for use cases across industries:
+- Financial Services: fraud detection, transaction monitoring, risk analysis
+- Healthcare: patient networks, care pathways, clinical research
+- Manufacturing: supply chain optimization, asset tracking, quality management
+- Retail: customer journey analysis, recommendation engines, inventory optimization
+- And many more...
 
-These data models (like the [Transaction Base Model](https://neo4j.com/developer/industry-use-cases/data-models/transaction-graph/transaction/transaction-base-model/) and [Fraud Event Sequence Model](https://neo4j.com/developer/industry-use-cases/data-models/transaction-graph/fraud-event-sequence/fraud-event-sequence-model/)) have been battle-tested in real-world scenarios. The toolkit maps your data to these proven models automatically.
+These data models have been battle-tested in real-world scenarios. The toolkit maps your data to these proven models automatically.
 
 ### 2. **The Ingestion Code Problem**
 You don't need to know how to write Neo4j ingestion code. The toolkit uses LLMs to:
@@ -71,11 +72,9 @@ You don't need to know how to write Neo4j ingestion code. The toolkit uses LLMs 
 - Handle the complexity for you
 
 ### 3. **The Minimum Viable Data Problem**
-You don't need to provide perfect, complete datasets. For each use case, we define the minimum required data. For synthetic identity fraud, that's just:
-- Customer IDs (unique references)
-- PII IDs (emails, phone numbers, device IDs, etc.)
+You don't need to provide perfect, complete datasets. For each use case, Neo4j defines the minimum required data. The toolkit helps you understand what's needed and validates whether your data meets those requirements. Often, you need surprisingly little - just the core entities and relationships relevant to your use case.
 
-That's it. Two columns. The toolkit handles the rest.
+The toolkit handles data validation, quality checks, and mapping complexity for you.
 
 ### 4. **The Time-to-Value Problem**
 You don't need days or weeks. From data to working queries in minutes. The focus is speed and simplicity, not enterprise-hardened production systems. This is about **proving value fast**.
@@ -109,16 +108,24 @@ This toolkit captures the collective knowledge of Neo4j's engineering teams, sol
 
 ## The Use Cases
 
-The toolkit leverages use cases and data models from the [Neo4j Industry Use Cases](https://neo4j.com/developer/industry-use-cases/) library. Currently supported use cases include:
+The toolkit leverages use cases and data models from the [Neo4j Industry Use Cases](https://neo4j.com/developer/industry-use-cases/) library across multiple industries:
 
-### Fraud Detection
-- **Transaction Monitoring**: Detect suspicious patterns in financial transactions
-- **Account Takeover**: Identify compromised accounts through behavioral analysis
-- **Synthetic Identity Fraud**: Find shared PII across supposedly distinct customers
-- **Fraud Rings**: Uncover networks of coordinated fraudulent activity
-- **Automated Facial Recognition Fraud**: Detect identity manipulation in verification systems
+### Financial Services
+- Transaction monitoring, fraud detection, account takeover prevention, synthetic identity fraud, fraud rings, risk analysis
 
-*As Neo4j adds more use cases and data models to the Industry Use Cases library, this toolkit will support them.*
+### Healthcare
+- Patient care networks, clinical research, treatment pathways, provider relationships
+
+### Manufacturing & Supply Chain
+- Supply chain optimization, asset tracking, quality management, logistics networks
+
+### Retail & E-commerce
+- Customer journey analysis, recommendation engines, inventory optimization, personalization
+
+### Technology & Infrastructure
+- Network topology, dependency mapping, IT service management, cybersecurity
+
+*The toolkit dynamically discovers available use cases from the Neo4j Industry Use Cases library. As Neo4j adds more use cases and data models, this toolkit automatically supports them.*
 
 ## The Philosophy
 
