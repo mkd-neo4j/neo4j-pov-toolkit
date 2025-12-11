@@ -1,7 +1,4 @@
 """
-Use via the root cli.py entry point ONLY.
-Invoke from project root: python cli.py neo4j-test
-
 neo4j-test CLI Command - Quick Connection Validation
 
 Purpose:
