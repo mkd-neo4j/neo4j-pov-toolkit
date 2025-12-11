@@ -136,16 +136,40 @@ cp ~/my-data/transactions.json workspace/raw_data/
 - Claims Fraud: Claimant + claim + one connection point
 - Transaction Monitoring: Account + transaction + amounts
 
-### 4. Get Working Code
+### 4. Analyze Your Data
+
+The LLM analyzes your data quality and structure before generating code:
+
+- ✅ Validates required fields are present
+- ✅ Detects nulls, invalid dates, and type mismatches
+- ✅ Identifies outliers and data distributions
+- ✅ Reports compatibility with use case requirements
+
+**Example Analysis Output**:
+```
+⚠️  Data Quality Issues:
+- phone: 120/10,000 rows (1.2%) have null values
+- signup_date: Format "MM/DD/YYYY" needs parsing
+- email: 15 malformed addresses detected
+
+✅ Safe to proceed with data cleaning adaptations
+```
+
+**Why This Matters**:
+- Catches issues BEFORE loading to Neo4j (easier to debug)
+- Adapts code to handle nulls, wrong types, and invalid values
+- Prevents "what happens when a column is broken?" surprises
+
+### 5. Get Working Code
 
 The LLM:
 1. Detects your Neo4j version (4.x, 5.x, 6.x)
-2. Analyzes your data structure
-3. Maps it to the proven data model
-4. Generates `workspace/generated/data_mapper.py`
-5. Creates batched, optimized ingestion code
+2. Uses data analysis findings to inform code generation
+3. Maps your data to the proven data model
+4. Generates `workspace/generated/data_mapper.py` with data cleaning and transformations
+5. Creates batched, optimized ingestion code with progress logging
 
-### 5. Run and Explore
+### 6. Run and Explore
 
 ```bash
 python workspace/generated/data_mapper.py
@@ -305,7 +329,7 @@ neo4j-pov-toolkit/
 ├── src/                # Pre-built infrastructure
 │   ├── core/          # Neo4j connection, logging, use case scraper
 │   ├── cli/           # CLI commands
-│   └── prompts/       # LLM guidance for code generation
+│   └── prompts/       # LLM guidance for data analysis and code generation
 │
 ├── docs/               # Documentation
 │   ├── WHY.md         # Why this exists
