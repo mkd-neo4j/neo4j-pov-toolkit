@@ -114,11 +114,6 @@ def execute(args):
         print()
 
         print(f"{Colors.DIM}Error: {info.get('error', 'Unknown error')}{Colors.RESET}\n")
-
-        print(f"{Colors.YELLOW}Next steps:{Colors.RESET}")
-        print("  1. Create .env file: cp .env.example .env")
-        print("  2. Edit .env with your Neo4j credentials")
-        print("  3. Run this test again\n")
         return 1
 
 
