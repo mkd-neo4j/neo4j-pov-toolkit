@@ -37,7 +37,6 @@ When generating code:
 ### Supporting Prompts (Detailed Guidance)
 - `src/prompts/setup.md` - Connection validation & version detection
 - `src/prompts/discover_usecase.md` - Use case matching (never invent use cases)
-- `src/prompts/analyze_data.md` - Data structure analysis & mapping
 - `src/prompts/generate_mapper.md` - Code generation API & examples
 
 ### Tools You Can Use
