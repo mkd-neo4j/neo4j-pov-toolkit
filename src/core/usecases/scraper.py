@@ -344,6 +344,11 @@ def _extract_data_models(soup: BeautifulSoup, base_url: str) -> List[UseCaseNode
 
             # Skip items with no meaningful href
             if not href or href == './' or name == 'Overview':
+                # Clear stale depth stack entries at this depth and deeper
+                # to prevent subsequent children from being attached to wrong parent
+                depths_to_clear = [d for d in depth_stack.keys() if d >= depth]
+                for d in depths_to_clear:
+                    del depth_stack[d]
                 continue
 
             # Convert relative URL to absolute
