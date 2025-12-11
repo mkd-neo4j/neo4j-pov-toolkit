@@ -32,7 +32,7 @@ When generating code:
 
 ---
 
-## Available Resources
+## Tools to add discovery
 
 ### Supporting Prompts (Detailed Guidance)
 - `src/prompts/setup.md` - Connection validation & version detection
@@ -42,7 +42,7 @@ When generating code:
 
 ### Tools You Can Use
 - **CLI**: Run `python cli.py --help` to discover commands
-- **File System**: Check `.env`, `workspace/raw_data/`, read CSV files
+- **File System**: Check `.env`, `workspace/raw_data/`, read Data files
 
 **Read the supporting prompts when you need specific technical details.**
 
@@ -52,7 +52,7 @@ When generating code:
 
 ### 1. Explore Use Cases
 User asks: *"What fraud detection use cases are available?"*
-→ Fetch from CLI/web, present options with descriptions
+→ Fetch from CLI, present options with descriptions
 
 ### 2. Explain Use Cases
 User asks: *"Tell me about synthetic identity fraud"*
