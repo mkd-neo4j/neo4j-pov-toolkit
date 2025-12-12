@@ -65,7 +65,7 @@ neo4j-pov-toolkit/
 │   ├── 00_setup.md                    # Step 0: Connection & version detection
 │   ├── 01_discover_usecase.md         # Step 1: Fetch use cases from website
 │   ├── 02_analyze_data.md             # Step 2: Understand CSV structure
-│   └── 03_generate_mapper.md          # Step 3: Generate data_mapper.py
+│   └── 03_load_data.md                # Step 3: Generate data_mapper.py
 │
 ├── docs/
 │   ├── WHY.md                         # Why this toolkit exists
