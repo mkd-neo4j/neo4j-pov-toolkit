@@ -55,17 +55,52 @@ Configuration:
 
 import logging
 import sys
+import time
 
-# Configure the root logging system with our standard format
-# This runs once when the module is imported, establishing the format
-# for all subsequent logging calls throughout the toolkit
-logging.basicConfig(
-    level=logging.INFO,  # Show INFO and above; use --debug flag to change to DEBUG
-    format='%(asctime)s | %(levelname)s | %(message)s',  # Clean, parseable format
-    datefmt='%H:%M:%S',  # Simple time format (no date needed for short-running operations)
-    stream=sys.stdout  # Output to stdout for natural flow (not stderr)
+
+class ElapsedTimeFormatter(logging.Formatter):
+    """
+    Custom formatter that includes elapsed time since logger initialization.
+
+    Format: HH:MM:SS | [+MM:SS] | LEVEL | message
+
+    Example:
+        08:03:00 | [+00:00] | INFO | Starting process...
+        08:03:06 | [+00:06] | INFO | Progress update...
+        08:08:30 | [+05:30] | INFO | More progress...
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start_time = time.time()
+
+    def format(self, record):
+        # Calculate elapsed time
+        elapsed_seconds = int(time.time() - self.start_time)
+        minutes = elapsed_seconds // 60
+        seconds = elapsed_seconds % 60
+
+        # Add elapsed time to the record
+        record.elapsed = f"[{minutes:02d}:{seconds:02d}]"
+
+        return super().format(record)
+
+
+# Create our custom formatter with elapsed time tracking
+formatter = ElapsedTimeFormatter(
+    fmt='%(asctime)s | %(elapsed)s | %(levelname)s | %(message)s',
+    datefmt='%H:%M:%S'
 )
+
+# Configure the handler with our custom formatter
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
 
 # Create our toolkit-specific logger
 # All toolkit code should import and use this 'log' instance
 log = logging.getLogger('neo4j-pov-toolkit')
+log.setLevel(logging.INFO)
+log.addHandler(handler)
+
+# Prevent propagation to avoid duplicate logs
+log.propagate = False
