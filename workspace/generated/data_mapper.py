@@ -530,15 +530,16 @@ def create_address_nodes_and_relationships(query, total_rows):
             # Create relationships
             query.run(cypher_rel, {"batch": batch_data})
 
-        processed += len(batch_rows)
-        if processed % LOG_INTERVAL == 0 or processed >= total_rows:
-            log.info(f"  Address nodes: {processed:,} / {total_rows:,} ({processed / total_rows * 100:.1f}%)")
+        processed += len(batch_data)
+        total_seen = processed + skipped_address + skipped_company
+        if total_seen % LOG_INTERVAL == 0 or total_seen >= total_rows:
+            log.info(f"  Address nodes: {processed:,} / {total_rows:,} ({total_seen / total_rows * 100:.1f}%)")
 
     if skipped_address > 0:
         log.warning(f"  Skipped {skipped_address:,} rows with incomplete address")
     if skipped_company > 0:
         log.warning(f"  Skipped {skipped_company:,} rows with null CompanyNumber")
-    log.info(f"✓ Created Address nodes and HAS_ADDRESS relationships")
+    log.info(f"✓ Created {processed:,} Address nodes and HAS_ADDRESS relationships")
 
 
 def create_address_country_relationships(query):
@@ -579,6 +580,7 @@ def create_company_sic_relationships(query, total_rows):
     
     for batch_rows in batch_generator(stream_csv(DATA_FILE), BATCH_SIZE):
         batch_data = []
+        rows_processed_in_batch = 0
         for row in batch_rows:
             company_number = clean_string(row.get("CompanyNumber", ""))
             
@@ -587,6 +589,7 @@ def create_company_sic_relationships(query, total_rows):
                 skipped += 1
                 continue
 
+            rows_processed_in_batch += 1
             # Check all 4 SIC code columns
             for rank, sic_col in enumerate([
                 "SICCode.SicText_1", "SICCode.SicText_2",
@@ -603,13 +606,14 @@ def create_company_sic_relationships(query, total_rows):
         if batch_data:
             query.run(cypher, {"batch": batch_data})
 
-        processed += len(batch_rows)
-        if processed % LOG_INTERVAL == 0 or processed >= total_rows:
-            log.info(f"  SIC relationships: {processed:,} / {total_rows:,} ({processed / total_rows * 100:.1f}%)")
+        processed += rows_processed_in_batch
+        total_seen = processed + skipped
+        if total_seen % LOG_INTERVAL == 0 or total_seen >= total_rows:
+            log.info(f"  SIC relationships: {total_seen:,} / {total_rows:,} ({total_seen / total_rows * 100:.1f}%)")
 
     if skipped > 0:
         log.warning(f"  Skipped {skipped:,} rows with null CompanyNumber")
-    log.info("✓ Created Company->SICCode relationships")
+    log.info(f"✓ Created SIC relationships for {processed:,} companies")
 
 
 def create_previous_name_nodes_and_relationships(query, total_rows):
@@ -644,6 +648,7 @@ def create_previous_name_nodes_and_relationships(query, total_rows):
 
     for batch_rows in batch_generator(stream_csv(DATA_FILE), BATCH_SIZE):
         batch_data = []
+        rows_processed_in_batch = 0
         for row in batch_rows:
             company_number = clean_string(row.get("CompanyNumber", ""))
             
@@ -652,6 +657,7 @@ def create_previous_name_nodes_and_relationships(query, total_rows):
                 skipped += 1
                 continue
 
+            rows_processed_in_batch += 1
             # Check all 10 previous name columns
             for seq in range(1, 11):
                 name_col = f"PreviousName_{seq}.CompanyName"
@@ -672,9 +678,10 @@ def create_previous_name_nodes_and_relationships(query, total_rows):
         if batch_data:
             query.run(cypher, {"batch": batch_data})
 
-        processed += len(batch_rows)
-        if processed % LOG_INTERVAL == 0 or processed >= total_rows:
-            log.info(f"  Previous names: {processed:,} / {total_rows:,} ({processed / total_rows * 100:.1f}%)")
+        processed += rows_processed_in_batch
+        total_seen = processed + skipped
+        if total_seen % LOG_INTERVAL == 0 or total_seen >= total_rows:
+            log.info(f"  Previous names: {total_seen:,} / {total_rows:,} ({total_seen / total_rows * 100:.1f}%)")
 
     if skipped > 0:
         log.warning(f"  Skipped {skipped:,} rows with null CompanyNumber")
