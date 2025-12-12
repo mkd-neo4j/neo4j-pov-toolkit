@@ -36,7 +36,7 @@
 **What you DON'T do as Engineer (in this file)**:
 - ❌ Schema mapping - that's Architect work (already done in Phase 1)
 - ❌ Use case discovery - that's Architect work
-- ❌ Write code yet - that comes next in generate_mapper.md
+- ❌ Write code yet - that comes next in load_data.md
 
 **Critical principle**:
 > **"You can't write defensive code if you don't know what you're defending against"** - Pedro Leitao
@@ -564,7 +564,7 @@ Generate data_mapper.py with:
 
 ## Integration with Code Generation
 
-**After validation, pass findings to generate_mapper.md**:
+**After validation, pass findings to load_data.md**:
 
 1. **Field Mapping**:
    - Source field → Use case property mappings
@@ -630,6 +630,6 @@ Data quality validation answers this question BEFORE the code runs.
 
 ## See Also
 
-- `generate_mapper.md` - Uses validation findings to generate code
+- `load_data.md` - Uses validation findings to generate code
 - `discover_usecase.md` - Defines required fields and data model
 - Working example: Sample data quality validation before generation

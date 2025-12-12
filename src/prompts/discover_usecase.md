@@ -393,4 +393,4 @@ See also:
 - `../PROMPT.md` - Overall guidance
 - `setup.md` - Connection validation (next step)
 - `analyze_data.md` - Data quality validation & structure analysis
-- `generate_mapper.md` - Code generation (final step)
+- `load_data.md` - Code generation (final step)

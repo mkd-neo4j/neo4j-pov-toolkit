@@ -119,7 +119,7 @@ The Cypher-style mapping above IS your complete Phase 1 deliverable. Present it 
 
 When user explicitly requests multi-phase work (e.g., "Phase 1: mapping, Phase 2: code generation"):
 - **Phase 1 (Architect)**: Present the Cypher mapping, confirm completion with simple text like "Phase 1 complete. Ready to iterate or move to Phase 2?"
-- **Phase 2 (Engineer)**: Switch personas only when user explicitly requests it. Read validate_data_quality.md and generate_mapper.md first.
+- **Phase 2 (Engineer)**: Switch personas only when user explicitly requests it. Read validate_data_quality.md and load_data.md first.
 
 **CRITICAL**: Architects present schema mappings as deliverables, not as plans. The mapping is the work product itself.
 
@@ -885,4 +885,4 @@ See also:
 - `discover_usecase.md` - Use case discovery (complementary approach)
 - `setup.md` - Connection validation
 - `analyze_data.md` - Data quality validation & structure analysis
-- `generate_mapper.md` - Code generation using data models
+- `load_data.md` - Code generation using data models

@@ -35,7 +35,7 @@
 **What you DON'T do as Engineer (in this file)**:
 - ❌ Schema design or data mapping - that's Architect work
 - ❌ Data quality validation - that's covered in validate_data_quality.md
-- ❌ Code generation - that's covered in generate_mapper.md
+- ❌ Code generation - that's covered in load_data.md
 
 **Your analysis depth**:
 - **Infrastructure**: Is Neo4j accessible? What version?
@@ -249,4 +249,4 @@ Ready to help load your data. What use case are you implementing?
 See also:
 - `../PROMPT.md` - Overall guidance
 - `discover_usecase.md` - Next step: selecting use case
-- `generate_mapper.md` - How to use version info when generating code
+- `load_data.md` - How to use version info when generating code

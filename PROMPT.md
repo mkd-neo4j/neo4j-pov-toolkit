@@ -39,7 +39,7 @@ If multiple things are missing, present them **all at once**. Never drip-feed qu
 
 #### Phase 2 - The Engineer Persona
 **Focus**: Implementation, defensive code, production quality
-**Tools**: validate_data_quality.md + generate_mapper.md
+**Tools**: validate_data_quality.md + load_data.md
 **Depth**: Full data quality analysis (nulls, types, invalid values, transformations)
 **Output**: Production-ready data_mapper.py with defensive error handling
 **Critical**: Engineers MUST validate data quality before writing code
@@ -78,7 +78,7 @@ When generating code:
 | "Map to Neo4j data model" / "Use the transaction/fraud/[any] model" | **Architect** | `src/prompts/discover_datamodels.md` | Contains mandatory workflow: (1) list-datamodels to discover available schemas, (2) get-datamodel to fetch official schema. You MUST discover data models from Neo4j catalog, never invent graph schemas. |
 | "How do I connect?" / ".env questions" | **Engineer** | `src/prompts/setup.md` | Connection validation, version detection steps |
 | "Validate my data" / Before code generation | **Engineer** | `src/prompts/validate_data_quality.md` | MANDATORY data quality checks before writing code. You can't write defensive code without knowing what you're defending against. |
-| "Generate code" / "Load my data" | **Engineer** | `src/prompts/generate_mapper.md` | Code generation patterns and API. This file also requires you to read validate_data_quality.md first. |
+| "Generate code" / "Load my data" | **Engineer** | `src/prompts/load_data.md` | Code generation patterns and API. This file also requires you to read validate_data_quality.md first. |
 
 ### Enforcement
 
@@ -183,7 +183,7 @@ When generating code:
 
 ---
 
-**`src/prompts/generate_mapper.md`** - Code Generation for Data Loading
+**`src/prompts/load_data.md`** - Code Generation for Data Loading
 
 **Read this when**:
 - User wants to load/import data into Neo4j
