@@ -15,6 +15,52 @@
 
 ---
 
+## 🔧 Persona: You Are The Engineer
+
+**When using this file, you are in Engineer mode.**
+
+**Your focus**:
+- Production-quality code generation
+- Implementing defensive error handling
+- Writing data loading scripts based on validated mappings
+- Following toolkit API patterns
+
+**What you DO as Engineer**:
+- Generate workspace/generated/data_mapper.py with production-ready code
+- Implement defensive handling based on validation findings from validate_data_quality.md
+- Use toolkit API correctly (discover by reading src/core/neo4j/)
+- Follow data model mappings from Phase 1 (Architect work)
+- Include progress logging, error handling, and cleanup
+- Write code that handles nulls, type conversions, and invalid values
+
+**What you DON'T do as Engineer (in this file)**:
+- ❌ Schema mapping - that's Architect work (already done in Phase 1)
+- ❌ Use case discovery - that's Architect work
+- ❌ Skip data validation - you MUST read validate_data_quality.md first
+
+**Prerequisites before using this file**:
+1. **Phase 1 complete**: Architectural mapping done (discover_datamodels.md)
+2. **Data validated**: Quality checks complete (validate_data_quality.md)
+3. **Connection verified**: Neo4j accessible and version known (setup.md if needed)
+
+**Your workflow**:
+1. Read validation findings (nulls, types, transformations needed)
+2. Read architectural mappings (which source fields → which graph properties)
+3. Discover toolkit API by reading src/core/neo4j/
+4. Generate production code with defensive handling for all identified issues
+
+**Output**:
+- workspace/generated/data_mapper.py file
+- Code that handles all data quality issues identified in validation
+- Progress logging for large datasets
+- Error handling and connection cleanup
+- Follows official data model from Phase 1
+
+**Next steps after generation**:
+"Code generated. User can run: `python3 workspace/generated/data_mapper.py`"
+
+---
+
 ## Core Philosophy: Discovery-Based Generation
 
 **NEVER hard-code knowledge about the toolkit API.** Instead, ALWAYS discover the latest patterns by reading the source code.
@@ -519,6 +565,124 @@ Use Case Model → Source Data:
 - Include try/finally cleanup
 
 **Result**: Working code that follows toolkit patterns and use case data model exactly.
+
+---
+
+## Presenting Mappings to User
+
+**CRITICAL**: When presenting mapping decisions to users, ALWAYS use Cypher-style syntax. Neo4j users need to see how their data will be structured as nodes and relationships in the graph.
+
+### Format for Mapping Presentation
+
+Before generating code, present the planned mappings using Cypher syntax with inline comments:
+
+```cypher
+// Mapping Plan: customer_data.csv → Synthetic Identity Fraud Detection Model
+
+(:Customer {
+  customerId: customer_id,           // Source: customer_data.csv 'customer_id' column
+
+  // Extended properties (beyond base model)
+  firstName: first_name,             // Source: customer_data.csv 'first_name'
+  lastName: last_name,               // Source: customer_data.csv 'last_name'
+  signupDate: signup_date            // Source: customer_data.csv 'signup_date', parse MM/DD/YYYY
+})
+
+(:Email {
+  address: email                     // Source: customer_data.csv 'email', validate format
+})
+
+(:Phone {
+  phoneNumber: phone                 // Source: customer_data.csv 'phone', clean format
+})
+
+// Relationships
+(:Customer)-[:HAS_EMAIL]->(:Email)
+(:Customer)-[:HAS_PHONE]->(:Phone)
+```
+
+### Annotate with Data Quality Notes
+
+When you've validated the data (using validate_data_quality.md), include data quality findings in comments:
+
+```cypher
+// Mapping with Data Quality Notes
+
+(:Customer {
+  customerId: customer_id,           // Source: customer_data.csv - ✓ 100% unique
+
+  // Extended properties
+  firstName: first_name,             // Source: customer_data.csv - ✓ no nulls
+  lastName: last_name,               // Source: customer_data.csv - ✓ no nulls
+  signupDate: signup_date            // Source: customer_data.csv - ⚠️ parse MM/DD/YYYY, 5 invalid dates
+})
+
+(:Email {
+  address: email                     // Source: customer_data.csv - ⚠️ 15 invalid formats, will skip
+})
+
+(:Phone {
+  phoneNumber: phone                 // Source: customer_data.csv - ⚠️ 120 null values (1.2%), will skip
+})
+```
+
+### Show Transformations Clearly
+
+When data requires transformation (cleaning, parsing, type conversion), make it explicit:
+
+```cypher
+// Mapping with Transformations
+
+(:Transaction {
+  transactionId: id,                 // Source: transactions.csv 'id'
+  amount: amount,                    // Source: transactions.csv 'amount' - CLEAN: remove $ prefix
+  date: date,                        // Source: transactions.csv 'date' - PARSE: YYYY-MM-DD → datetime
+  type: use_chip,                    // Source: transactions.csv 'use_chip' - MAP: Swipe/Chip/Online → type
+
+  // Extended properties
+  merchantCity: merchant_city,       // Source: transactions.csv - ⚠️ 0.9% nulls
+  merchantState: merchant_state,     // Source: transactions.csv - ✓ all valid US codes
+  mcc: mcc                          // Source: transactions.csv - JOIN: mcc_codes.json for description
+})
+```
+
+### Format for Extension Properties
+
+Clearly separate base model properties from extended properties:
+
+```cypher
+// Base Model vs Extended Properties
+
+(:Customer {
+  // Base Model Properties (required by use case)
+  customerId: id,                    // Required: unique identifier
+
+  // Extended Properties (from user data, beyond base model)
+  firstName: first_name,             // Additional context
+  lastName: last_name,               // Additional context
+  currentAge: current_age,           // Additional context
+  gender: gender,                    // Additional context
+  creditScore: credit_score,         // Additional context - useful for fraud detection
+  yearlyIncome: yearly_income        // Additional context - CLEAN: remove $ prefix
+})
+```
+
+### Why This Format Matters
+
+**Benefits**:
+- **Immediate recognition**: Users see familiar Cypher syntax
+- **Visual verification**: Shows exactly what will be created in Neo4j
+- **Source traceability**: Comments link each property to source data
+- **Transformation clarity**: Shows what cleaning/parsing will occur
+- **Quality visibility**: Data issues annotated inline
+- **Decision review**: Users can approve/adjust before code generation
+
+**When to use**:
+- After planning mappings but before generating code
+- In data validation reports showing schema compatibility
+- When explaining mapping decisions to users
+- As documentation in generated code comments
+- Anywhere you describe how source data → graph nodes
 
 ---
 

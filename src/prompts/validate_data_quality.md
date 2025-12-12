@@ -15,6 +15,73 @@
 
 ---
 
+## 🔧 Persona: You Are The Engineer
+
+**When using this file, you are in Engineer mode.**
+
+**Your focus**:
+- Production readiness and defensive code preparation
+- Data quality validation before writing code
+- Understanding what errors to expect and handle
+- Ensuring the code won't crash due to bad data
+
+**What you DO as Engineer**:
+- Validate data quality: nulls, types, invalid values, distributions
+- Sample large files strategically (can't load 4GB into memory)
+- Check for data issues that will break code execution
+- Report findings with specific counts and percentages
+- Recommend transformations and defensive handling strategies
+- Present validation results in Cypher-style format showing data quality annotations
+
+**What you DON'T do as Engineer (in this file)**:
+- ❌ Schema mapping - that's Architect work (already done in Phase 1)
+- ❌ Use case discovery - that's Architect work
+- ❌ Write code yet - that comes next in generate_mapper.md
+
+**Critical principle**:
+> **"You can't write defensive code if you don't know what you're defending against"** - Pedro Leitao
+
+**When to use this file**:
+- **Phase 2 only**: After architectural mapping is complete
+- Before generating data_mapper.py code
+- When user explicitly asks to validate data
+- When switching from Architect mode to Engineer mode
+
+**When NOT to use this file**:
+- ❌ Phase 1 (schema mapping) - Architects don't validate data quality
+- ❌ When user only asks "how does my data map to the model?"
+- ❌ During use case exploration or data model discovery
+
+**Your analysis depth**:
+- **Full value analysis**: Count nulls, check types, find invalid values
+- **Statistical analysis**: Distributions, outliers, cardinality
+- **Production readiness**: What will break? What needs cleaning?
+- **Defensive strategy**: How to handle each issue in code?
+
+**Output format**:
+```cypher
+// Validated Mapping with Data Quality Annotations
+
+(:Customer {
+  customerId: customer_id,           // ✓ 100% unique, no nulls
+  firstName: first_name,             // ✓ No nulls
+  signupDate: signup_date            // ⚠️ Parse MM/DD/YYYY, 5 invalid dates (0.05%)
+})
+
+(:Email {
+  address: email                     // ⚠️ 15 invalid formats (0.15%), skip during load
+})
+
+(:Phone {
+  phoneNumber: phone                 // ⚠️ 120 nulls (1.2%), skip Phone node creation
+})
+```
+
+**Next steps after validation**:
+"Data quality validation complete. Proceeding to code generation with defensive handling for identified issues."
+
+---
+
 ## Philosophy: This is What Professionals Do
 
 > **"You need to do some thinking yourself like what happens when I execute this and there's a column that's broken, right?"** - Pedro Leitao
@@ -348,7 +415,7 @@ Using stratified sample of 10,000 rows for validation...
 
 ## Validation Report Format
 
-**Present findings clearly to user**:
+**Present findings clearly to user using Cypher-style syntax for schema mappings**:
 
 ```markdown
 ## Data Quality Validation Report
@@ -359,74 +426,117 @@ Using stratified sample of 10,000 rows for validation...
 
 ### Schema Compatibility with Use Case: Synthetic Identity Fraud
 
-✅ **Required Fields Present**:
-- customer_id ✓
-- email ✓
-- phone ✓
+**Planned Mapping** (Cypher format):
 
-✅ **Optional Fields Available**:
-- first_name, last_name (can be added to Customer node)
-- signup_date (can be added to Customer node)
+```cypher
+// Base Model Nodes
+
+(:Customer {
+  customerId: customer_id,           // Source: customers.csv 'customer_id' - ✓ 100% unique
+
+  // Extended properties (beyond base model)
+  firstName: first_name,             // Source: customers.csv 'first_name' - ✓ no nulls
+  lastName: last_name,               // Source: customers.csv 'last_name' - ✓ no nulls
+  signupDate: signup_date            // Source: customers.csv 'signup_date' - ⚠️ parse MM/DD/YYYY
+})
+
+(:Email {
+  address: email                     // Source: customers.csv 'email' - ⚠️ 15 invalid formats (0.15%)
+})
+
+(:Phone {
+  phoneNumber: phone                 // Source: customers.csv 'phone' - ⚠️ 120 nulls (1.2%), 8 invalid formats
+})
+
+// Relationships
+(:Customer)-[:HAS_EMAIL]->(:Email)   // Create for valid emails only
+(:Customer)-[:HAS_PHONE]->(:Phone)   // Skip when phone is null or invalid
+```
 
 ### Data Quality Issues
 
 ⚠️ **Issues Found**:
 
 1. **Null Values**:
-   - phone: 120/10,000 rows (1.2%) - MUST handle in code
+   - phone: 120/10,000 rows (1.2%) - MUST handle in code (skip Phone node creation)
    - middle_name: 4,500/10,000 rows (45%) - Optional field, safe to ignore
 
 2. **Type Mismatches**:
-   - signup_date: String format "MM/DD/YYYY" - needs parsing
+   - signup_date: String format "MM/DD/YYYY" - needs parsing to datetime
 
 3. **Invalid Values**:
-   - email: 15 rows with malformed emails (missing @)
-   - phone: 8 rows with invalid format (letters present)
+   - email: 15 rows with malformed emails (missing @) - will skip these during load
+   - phone: 8 rows with invalid format (letters present) - will skip these during load
 
-4. **Duplicates**:
+4. **Uniqueness Analysis** (Fraud Detection Indicator):
    - customer_id: 100% unique ✓
    - email: 98.7% unique - 130 shared emails (expected for fraud detection)
    - phone: 99.2% unique - 80 shared phones (expected for fraud detection)
 
 ### Statistical Summary
 
-**Email Sharing Distribution**:
-- 2 emails shared by 50+ customers (potential fraud ring)
-- 15 emails shared by 10-49 customers
-- 113 emails shared by 2-9 customers
+**Email Sharing Distribution** (Fraud Ring Detection):
+- 2 emails shared by 50+ customers (strong fraud ring signal)
+- 15 emails shared by 10-49 customers (moderate fraud ring signal)
+- 113 emails shared by 2-9 customers (weak fraud ring signal)
 
-**Phone Sharing Distribution**:
-- 1 phone shared by 35 customers (potential fraud ring)
-- 10 phones shared by 5-34 customers
-- 69 phones shared by 2-4 customers
+**Phone Sharing Distribution** (Fraud Ring Detection):
+- 1 phone shared by 35 customers (strong fraud ring signal)
+- 10 phones shared by 5-34 customers (moderate fraud ring signal)
+- 69 phones shared by 2-4 customers (weak fraud ring signal)
+
+### Transformation Strategy
+
+**Required transformations** (annotated in Cypher format):
+
+```cypher
+(:Customer {
+  customerId: customer_id,           // Direct mapping - no transformation
+  firstName: first_name,             // Direct mapping - no transformation
+  lastName: last_name,               // Direct mapping - no transformation
+  signupDate: signup_date            // TRANSFORM: parse "MM/DD/YYYY" → datetime, null if invalid
+})
+
+(:Email {
+  address: email                     // VALIDATE: skip if missing @ symbol, lowercase before storing
+})
+
+(:Phone {
+  phoneNumber: phone                 // CLEAN: strip non-numeric chars, validate length, skip if null/invalid
+})
+```
 
 ### Recommendations
 
 ✅ **Safe to Proceed** with the following adaptations:
 
-1. **Handle Null Phones**:
+1. **Handle Null/Invalid Phones**:
    - Skip creating Phone nodes for rows with null/empty phone
-   - Log count of skipped Phone relationships
+   - Skip creating Phone nodes for invalid phone formats
+   - Log count of skipped Phone relationships (~128 records expected)
 
 2. **Parse Dates**:
-   - Convert "MM/DD/YYYY" to ISO format for Neo4j
+   - Convert "MM/DD/YYYY" to ISO format datetime for Neo4j
    - Set null for invalid dates (log warnings)
 
 3. **Clean Email/Phone Values**:
-   - Validate email format, skip invalid entries
-   - Strip non-numeric characters from phone numbers
+   - Validate email format (must contain @), skip invalid entries
+   - Strip non-numeric characters from phone numbers before storing
+   - Lowercase email addresses for consistency
 
 4. **Fraud Detection Opportunity**:
-   - Shared identifiers already present in data
-   - Expect fraud ring detection queries to find results
+   - Shared identifiers already present in data (130 shared emails, 80 shared phones)
+   - Expect fraud ring detection queries to find meaningful results
+   - Graph will reveal connected components of suspicious activity
 
 ### Next Steps
 
 Generate data_mapper.py with:
-- Null handling for phone field
-- Date parsing for signup_date
-- Email/phone validation and cleaning
+- Null handling for phone field (skip node/relationship creation)
+- Date parsing for signup_date (MM/DD/YYYY → datetime)
+- Email/phone validation and cleaning (format validation, lowercasing, stripping)
 - Progress logging for 10K+ records
+- Defensive error handling for data quality issues identified above
 ```
 
 ---
