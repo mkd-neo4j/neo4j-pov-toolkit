@@ -740,10 +740,13 @@ def main():
     # Count rows for progress tracking
     total_rows = count_rows(DATA_FILE)
 
-    # Get query runner
-    query = get_query()
+    # Initialize query runner (set to None for safe cleanup in finally block)
+    query = None
 
     try:
+        # Get query runner
+        query = get_query()
+
         # Phase 1: Schema setup
         log.info("\n--- PHASE 1: Schema Setup ---")
         create_constraints_and_indexes(query)
@@ -781,8 +784,9 @@ def main():
         raise
 
     finally:
-        # Always close connection
-        query.close()
+        # Always close connection if it was established
+        if query is not None:
+            query.close()
 
 
 if __name__ == "__main__":
