@@ -256,7 +256,11 @@ def create_constraints_and_indexes(query):
         CREATE CONSTRAINT sic_code IF NOT EXISTS
         FOR (s:SICCode) REQUIRE s.code IS UNIQUE
         """,
-        # PreviousName - no uniqueness (same name can be used by multiple companies)
+        # PreviousName - composite key (company + name + sequence is unique)
+        """
+        CREATE CONSTRAINT previous_name_composite IF NOT EXISTS
+        FOR (pn:PreviousName) REQUIRE (pn.companyNumber, pn.name, pn.sequence) IS NODE KEY
+        """,
     ]
 
     indexes = [
