@@ -20,7 +20,19 @@ Performance Considerations:
     - Estimated load time: 30-60 minutes depending on hardware
 
 Usage:
-    python3 workspace/generated/data_mapper.py
+    python3 workspace/generated/data_mapper.py              # Run all phases
+    python3 workspace/generated/data_mapper.py --phase 6    # Run only phase 6 (name history)
+    python3 workspace/generated/data_mapper.py --phase 4 5  # Run phases 4 and 5
+    python3 workspace/generated/data_mapper.py --list       # List available phases
+
+Phases:
+    1 - Schema (constraints and indexes)
+    2 - Lookup tables (countries, SIC codes)
+    3 - Company nodes
+    4 - Address nodes and relationships
+    5 - SIC code relationships
+    6 - Previous name nodes and relationships
+    7 - Verification
 
 Requirements:
     - .env file with NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
@@ -42,6 +54,7 @@ sys.path.insert(0, str(project_root))
 # =============================================================================
 # IMPORTS
 # =============================================================================
+import argparse
 import csv
 import re
 from datetime import datetime
@@ -49,6 +62,20 @@ from datetime import datetime
 # Toolkit imports (after path setup)
 from src.core.neo4j.version import get_query
 from src.core.logger import log
+
+# =============================================================================
+# PHASE DEFINITIONS
+# =============================================================================
+
+PHASES = {
+    1: ("Schema", "Create constraints and indexes"),
+    2: ("Lookup Tables", "Create Country and SICCode nodes"),
+    3: ("Companies", "Create Company nodes"),
+    4: ("Addresses", "Create Address nodes and HAS_ADDRESS relationships"),
+    5: ("SIC Relationships", "Create Company->SICCode CLASSIFIED_AS relationships"),
+    6: ("Name History", "Create PreviousName nodes and PREVIOUSLY_NAMED relationships"),
+    7: ("Verification", "Verify node and relationship counts"),
+}
 
 # =============================================================================
 # CONFIGURATION
@@ -730,13 +757,87 @@ def verify_load(query):
 # MAIN EXECUTION
 # =============================================================================
 
+def parse_args():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Load Companies House data into Neo4j",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python3 data_mapper.py              # Run all phases
+  python3 data_mapper.py --phase 6    # Run only phase 6 (name history)
+  python3 data_mapper.py --phase 4 5  # Run phases 4 and 5
+  python3 data_mapper.py --list       # List available phases
+        """
+    )
+    parser.add_argument(
+        "--phase", "-p",
+        type=int,
+        nargs="+",
+        choices=list(PHASES.keys()),
+        help="Run only specific phase(s). Can specify multiple."
+    )
+    parser.add_argument(
+        "--list", "-l",
+        action="store_true",
+        help="List available phases and exit"
+    )
+    parser.add_argument(
+        "--skip-row-count",
+        action="store_true",
+        help="Skip counting rows (faster startup, no progress percentage)"
+    )
+    return parser.parse_args()
+
+
+def list_phases():
+    """Print available phases and exit."""
+    print("\nAvailable Phases:")
+    print("-" * 60)
+    for num, (name, description) in PHASES.items():
+        print(f"  {num}: {name:<20} - {description}")
+    print("-" * 60)
+    print("\nUsage: python3 data_mapper.py --phase 6    # Run phase 6 only")
+    print("       python3 data_mapper.py --phase 4 5  # Run phases 4 and 5")
+
+
+def run_phase(phase_num, query, total_rows):
+    """Execute a single phase by number."""
+    name, description = PHASES[phase_num]
+    log.info(f"\n--- PHASE {phase_num}: {name} ---")
+    log.info(f"    {description}")
+
+    if phase_num == 1:
+        create_constraints_and_indexes(query)
+    elif phase_num == 2:
+        extract_and_create_country_nodes(query, total_rows)
+        extract_and_create_sic_codes(query, total_rows)
+    elif phase_num == 3:
+        create_company_nodes(query, total_rows)
+    elif phase_num == 4:
+        create_address_nodes_and_relationships(query, total_rows)
+        create_address_country_relationships(query)
+    elif phase_num == 5:
+        create_company_sic_relationships(query, total_rows)
+    elif phase_num == 6:
+        create_previous_name_nodes_and_relationships(query, total_rows)
+    elif phase_num == 7:
+        verify_load(query)
+
+
 def main():
     """
     Main execution function - orchestrates the entire data loading process.
     """
+    args = parse_args()
+
+    # Handle --list flag
+    if args.list:
+        list_phases()
+        return
+
     log.info("=" * 60)
     log.info("COMPANIES HOUSE DATA LOADER")
-    log.info("UK Company Registry Graph")
     log.info("=" * 60)
 
     # Verify data file exists
@@ -748,8 +849,16 @@ def main():
     log.info(f"Data file: {DATA_FILE.name}")
     log.info(f"File size: {DATA_FILE.stat().st_size / (1024 ** 3):.2f} GB")
 
-    # Count rows for progress tracking
-    total_rows = count_rows(DATA_FILE)
+    # Determine which phases to run
+    phases_to_run = args.phase if args.phase else list(PHASES.keys())
+    log.info(f"Phases to run: {phases_to_run}")
+
+    # Count rows for progress tracking (unless skipped)
+    if args.skip_row_count:
+        total_rows = 0
+        log.info("Skipping row count (progress will show absolute numbers only)")
+    else:
+        total_rows = count_rows(DATA_FILE)
 
     # Initialize query runner (set to None for safe cleanup in finally block)
     query = None
@@ -758,37 +867,13 @@ def main():
         # Get query runner
         query = get_query()
 
-        # Phase 1: Schema setup
-        log.info("\n--- PHASE 1: Schema Setup ---")
-        create_constraints_and_indexes(query)
+        # Run selected phases
+        for phase_num in sorted(phases_to_run):
+            run_phase(phase_num, query, total_rows)
 
-        # Phase 2: Lookup tables (small, run first)
-        log.info("\n--- PHASE 2: Lookup Tables ---")
-        extract_and_create_country_nodes(query, total_rows)
-        extract_and_create_sic_codes(query, total_rows)
-
-        # Phase 3: Main data (large, stream and batch)
-        log.info("\n--- PHASE 3: Company Data ---")
-        create_company_nodes(query, total_rows)
-
-        # Phase 4: Address data
-        log.info("\n--- PHASE 4: Address Data ---")
-        create_address_nodes_and_relationships(query, total_rows)
-        create_address_country_relationships(query)
-
-        # Phase 5: Relationships
-        log.info("\n--- PHASE 5: Industry Classification ---")
-        create_company_sic_relationships(query, total_rows)
-
-        # Phase 6: Name history
-        log.info("\n--- PHASE 6: Name History ---")
-        create_previous_name_nodes_and_relationships(query, total_rows)
-
-        # Verification
-        log.info("\n--- VERIFICATION ---")
-        verify_load(query)
-
+        log.info("\n" + "=" * 60)
         log.info("✅ Data load complete!")
+        log.info("=" * 60)
 
     except Exception as e:
         log.error(f"Load failed: {e}")
