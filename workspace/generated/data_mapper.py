@@ -236,7 +236,8 @@ def count_rows(file_path):
     """Count total rows in file (for progress calculation)."""
     log.info(f"Counting rows in {file_path.name}...")
     with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-        count = sum(1 for _ in f) - 1  # Subtract header
+        # Subtract header, ensure non-negative (empty file = 0, not -1)
+        count = max(0, sum(1 for _ in f) - 1)
     log.info(f"Total rows: {count:,}")
     return count
 
