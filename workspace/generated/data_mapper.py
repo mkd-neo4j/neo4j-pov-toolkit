@@ -86,7 +86,8 @@ BATCH_SIZE = 2000  # Records per batch (tuned for this dataset)
 LOG_INTERVAL = 50000  # Log progress every N records
 
 # Data file path (relative to this script)
-DATA_FILE = script_path.parent.parent / "raw_data" / "BasicCompanyDataAsOneFile-2025-12-01.csv"
+# Uses generic filename - download script renames dated file to this standard name
+DATA_FILE = script_path.parent.parent / "raw_data" / "BasicCompanyData.csv"
 
 # Country name to ISO code mapping
 COUNTRY_CODES = {

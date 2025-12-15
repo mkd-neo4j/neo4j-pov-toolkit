@@ -29,6 +29,7 @@ from urllib.error import HTTPError, URLError
 
 BASE_URL = "https://download.companieshouse.gov.uk"
 FILE_PREFIX = "BasicCompanyDataAsOneFile"
+GENERIC_FILENAME = "BasicCompanyData.csv"  # Renamed output for data mapper compatibility
 
 # Output directory (relative to project root)
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -201,12 +202,13 @@ def cmd_download(date_str, keep_zip=False):
     url = build_download_url(date_str)
     zip_filename = f"{FILE_PREFIX}-{date_str}.zip"
     zip_path = OUTPUT_DIR / zip_filename
+    generic_csv_path = OUTPUT_DIR / GENERIC_FILENAME
     
     print(f"\n{'='*60}")
     print("COMPANIES HOUSE DATA DOWNLOADER")
     print(f"{'='*60}")
     print(f"\nSource: {url}")
-    print(f"Output: {OUTPUT_DIR}")
+    print(f"Output: {OUTPUT_DIR / GENERIC_FILENAME}")
     
     # Check if URL exists
     print("\nChecking file availability...")
@@ -221,10 +223,8 @@ def cmd_download(date_str, keep_zip=False):
     print(f"✓ File available: {format_size(size)}")
     
     # Check if already downloaded
-    csv_filename = f"{FILE_PREFIX}-{date_str}.csv"
-    csv_path = OUTPUT_DIR / csv_filename
-    if csv_path.exists():
-        print(f"\n⚠️  CSV already exists: {csv_path.name}")
+    if generic_csv_path.exists():
+        print(f"\n⚠️  CSV already exists: {generic_csv_path.name}")
         response = input("   Overwrite? [y/N]: ").strip().lower()
         if response != 'y':
             print("   Aborted.")
@@ -252,6 +252,16 @@ def cmd_download(date_str, keep_zip=False):
         print(f"\n❌ Extraction failed: {e}")
         return 1
     
+    # Rename to generic filename for data mapper compatibility
+    if extracted:
+        original_csv = extracted[0]  # The CSV file from the ZIP
+        if original_csv.name != GENERIC_FILENAME:
+            print(f"\nRenaming to generic filename...")
+            if generic_csv_path.exists():
+                generic_csv_path.unlink()  # Remove old file if exists
+            original_csv.rename(generic_csv_path)
+            print(f"✓ Renamed: {original_csv.name} → {GENERIC_FILENAME}")
+    
     # Cleanup ZIP
     if not keep_zip:
         print(f"\nCleaning up ZIP file...")
@@ -261,7 +271,8 @@ def cmd_download(date_str, keep_zip=False):
     print(f"\n{'='*60}")
     print("✅ DOWNLOAD COMPLETE")
     print(f"{'='*60}")
-    print(f"\nData file: {OUTPUT_DIR / csv_filename}")
+    print(f"\nData file: {generic_csv_path}")
+    print(f"Data date: {date_str}")
     print(f"\nNext: Run the data mapper to load into Neo4j:")
     print(f"  python3 workspace/generated/data_mapper.py")
     
