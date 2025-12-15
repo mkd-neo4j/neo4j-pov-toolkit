@@ -272,28 +272,7 @@ SET n.property = row.value
 - Enables fast `MATCH` operations during relationship creation
 - Example: Matching addresses by postcode for relationship creation
 
-**Code template** (see Section 0 in Required Code Structure below):
-```python
-def create_constraints_and_indexes(query):
-    """Create ALL constraints and indexes BEFORE loading data."""
-    # Constraints on unique identifiers
-    constraints = [
-        "CREATE CONSTRAINT company_id_unique IF NOT EXISTS FOR (c:Company) REQUIRE c.companyId IS UNIQUE",
-        "CREATE CONSTRAINT address_id_unique IF NOT EXISTS FOR (a:Address) REQUIRE a.addressId IS UNIQUE"
-    ]
-
-    # Indexes on non-unique lookup properties
-    indexes = [
-        "CREATE INDEX company_name IF NOT EXISTS FOR (c:Company) ON (c.name)",
-        "CREATE INDEX address_postcode IF NOT EXISTS FOR (a:Address) ON (a.postcode)"
-    ]
-
-    for constraint in constraints:
-        query.run(constraint)
-
-    for index in indexes:
-        query.run(index)
-```
+**Implementation**: See **Section 0** in Required Code Structure below for complete template.
 
 **When to create indexes**:
 - **BEFORE loading:** Unique constraints (used in MERGE)
@@ -318,14 +297,8 @@ MERGE (c)-[:HAS_ADDRESS]->(a)
 
 **Multi-pass approach** (✅ efficient for large data):
 ```python
-# Pass 1: Load ALL Company nodes (5.6M records)
-create_company_nodes(query, data)  # Uses constraint for fast MERGE
-
-# Pass 2: Load ALL Address nodes
-create_address_nodes(query, data)  # Uses constraint for fast MERGE
-
-# Pass 3: Create ALL relationships
-create_has_address_relationships(query, data)  # Uses both constraints for fast MATCH
+# Pass 1: ALL Company nodes → Pass 2: ALL Address nodes → Pass 3: ALL relationships
+# See Principle 5 below for detailed Cypher patterns
 ```
 
 **Why multi-pass is faster**:
@@ -436,247 +409,50 @@ MERGE (c)-[:HAS_ADDRESS]->(a)
 
 ### Principle 6: Progress Logging for Production
 
-**Users need to see progress for large datasets.**
+**Users need to see progress for large datasets (>100K records).**
 
-For datasets with millions of records, log progress periodically:
-
+**Pattern** (use in all node/relationship functions):
 ```python
-batch_size = 10000
-total_records = len(node_data)
 log_interval = max(50000, batch_size * 10)  # Log every 50K or 10 batches
-
-for i in range(0, total_records, batch_size):
-    batch = node_data[i:i + batch_size]
-    query.run(cypher, {'batch': batch})
-
-    # Progress logging
-    records_processed = min(i + batch_size, total_records)
-    if records_processed % log_interval == 0 or records_processed == total_records:
-        progress_pct = (records_processed / total_records) * 100
-        log.info(f"  Progress: {records_processed:,} / {total_records:,} ({progress_pct:.1f}%)")
+# Inside batching loop:
+records_processed = min(i + batch_size, total_records)
+if records_processed % log_interval == 0 or records_processed == total_records:
+    progress_pct = (records_processed / total_records) * 100
+    log.info(f"  Progress: {records_processed:,} / {total_records:,} ({progress_pct:.1f}%)")
 ```
 
-**Why this matters**:
-- 5.6M records takes minutes to load
-- Without logging, appears frozen
-- Users need confirmation the process is working
+**Why**: 5.6M records takes minutes; without logging, appears frozen. Users need confirmation the process is working.
+
+**See Section 4** for complete implementation in node creation functions.
 
 ---
 
-### Complete Example: Companies House 5.6M Record Load
+### Real-World Example: Companies House 5.6M Record Load
 
 **Scenario**: Loading UK Companies House data with companies and addresses.
 
 **Data model**:
-- `Company` nodes: 5.6M records
-- `Address` nodes: 4.2M unique addresses
-- `HAS_ADDRESS` relationships: 5.6M connections
+- `Company` nodes: 5.6M records (batch_size=10,000)
+- `Address` nodes: 4.2M unique addresses (batch_size=10,000)
+- `HAS_ADDRESS` relationships: 5.6M connections (batch_size=5,000)
 
 **Optimized loading strategy**:
+1. Create constraints and indexes FIRST (Section 0)
+2. Load all Company nodes using template from Section 4
+3. Load all Address nodes using template from Section 4
+4. Create HAS_ADDRESS relationships using template from Section 5
+5. Main function orchestrates using pattern from Section 6
 
-```python
-def main():
-    """Load Companies House data with optimal performance."""
-    log.info("Starting Companies House data load...")
-
-    # Load source data
-    data = load_data()
-
-    # Get query runner
-    query = get_query()
-
-    try:
-        # STEP 0: Create constraints and indexes FIRST
-        # This is THE most important performance optimization
-        create_constraints_and_indexes(query)
-
-        # STEP 1: Load all Company nodes (5.6M records, batch_size=10000)
-        create_company_nodes(query, data)
-
-        # STEP 2: Load all Address nodes (4.2M records, batch_size=10000)
-        create_address_nodes(query, data)
-
-        # STEP 3: Create relationships (5.6M, batch_size=5000)
-        # Fast because both Company and Address have constraints
-        create_has_address_relationships(query, data)
-
-        # Verify load
-        verify_load(query)
-
-        log.info("✅ Data load complete!")
-
-    finally:
-        query.close()
-
-
-def create_constraints_and_indexes(query):
-    """
-    Create ALL constraints and indexes BEFORE loading data.
-    Uses native Cypher only - no APOC required.
-    """
-    log.info("Creating constraints and indexes...")
-
-    # Unique constraints (automatically create indexes)
-    constraints = [
-        "CREATE CONSTRAINT company_id_unique IF NOT EXISTS FOR (c:Company) REQUIRE c.companyId IS UNIQUE",
-        "CREATE CONSTRAINT address_id_unique IF NOT EXISTS FOR (a:Address) REQUIRE a.addressId IS UNIQUE"
-    ]
-
-    # Additional indexes for non-unique lookup properties
-    indexes = [
-        "CREATE INDEX company_name IF NOT EXISTS FOR (c:Company) ON (c.name)",
-        "CREATE INDEX address_postcode IF NOT EXISTS FOR (a:Address) ON (a.postcode)"
-    ]
-
-    for constraint in constraints:
-        query.run(constraint)
-        log.info(f"  ✓ Created constraint")
-
-    for index in indexes:
-        query.run(index)
-        log.info(f"  ✓ Created index")
-
-    log.info("✓ All constraints and indexes created")
-
-
-def create_company_nodes(query, data):
-    """
-    Load all Company nodes.
-    Batch size: 10,000 for large dataset (5.6M records).
-    """
-    log.info("Creating Company nodes...")
-
-    # Transform data
-    company_data = [
-        {
-            'companyId': record['company_number'],
-            'name': record['company_name'],
-            'status': record['company_status'],
-            'incorporationDate': record['incorporation_date']
-        }
-        for record in data
-    ]
-
-    # Cypher query (uses constraint for fast MERGE)
-    cypher = """
-    UNWIND $batch AS row
-    MERGE (c:Company {companyId: row.companyId})
-    SET c.name = row.name,
-        c.status = row.status,
-        c.incorporationDate = row.incorporationDate
-    """
-
-    # Load in batches with progress logging
-    batch_size = 10000  # Optimal for large dataset
-    total_records = len(company_data)
-    log_interval = 50000  # Log every 50K records
-
-    for i in range(0, total_records, batch_size):
-        batch = company_data[i:i + batch_size]
-        query.run(cypher, {'batch': batch})
-
-        # Progress logging
-        records_processed = min(i + batch_size, total_records)
-        if records_processed % log_interval == 0 or records_processed == total_records:
-            progress_pct = (records_processed / total_records) * 100
-            log.info(f"  Progress: {records_processed:,} / {total_records:,} ({progress_pct:.1f}%)")
-
-    log.info(f"✓ Created {len(company_data):,} Company nodes")
-
-
-def create_address_nodes(query, data):
-    """
-    Load all Address nodes.
-    Batch size: 10,000 for large dataset.
-    """
-    log.info("Creating Address nodes...")
-
-    # Extract unique addresses
-    address_data = []
-    seen_addresses = set()
-
-    for record in data:
-        address_id = record['registered_office_address_hash']  # Unique identifier
-        if address_id not in seen_addresses:
-            address_data.append({
-                'addressId': address_id,
-                'street': record['address_line_1'],
-                'locality': record['locality'],
-                'postcode': record['postcode']
-            })
-            seen_addresses.add(address_id)
-
-    # Cypher query (uses constraint for fast MERGE)
-    cypher = """
-    UNWIND $batch AS row
-    MERGE (a:Address {addressId: row.addressId})
-    SET a.street = row.street,
-        a.locality = row.locality,
-        a.postcode = row.postcode
-    """
-
-    # Load in batches
-    batch_size = 10000
-    total_records = len(address_data)
-    log_interval = 50000
-
-    for i in range(0, total_records, batch_size):
-        batch = address_data[i:i + batch_size]
-        query.run(cypher, {'batch': batch})
-
-        records_processed = min(i + batch_size, total_records)
-        if records_processed % log_interval == 0 or records_processed == total_records:
-            progress_pct = (records_processed / total_records) * 100
-            log.info(f"  Progress: {records_processed:,} / {total_records:,} ({progress_pct:.1f}%)")
-
-    log.info(f"✓ Created {len(address_data):,} Address nodes")
-
-
-def create_has_address_relationships(query, data):
-    """
-    Create HAS_ADDRESS relationships.
-    Batch size: 5,000 (smaller because of MATCH operations).
-    """
-    log.info("Creating HAS_ADDRESS relationships...")
-
-    # Extract relationships
-    rel_data = [
-        {
-            'companyId': record['company_number'],
-            'addressId': record['registered_office_address_hash']
-        }
-        for record in data
-    ]
-
-    # Cypher query (both MATCH clauses use indexed lookups)
-    cypher = """
-    UNWIND $batch AS row
-    MATCH (c:Company {companyId: row.companyId})
-    MATCH (a:Address {addressId: row.addressId})
-    MERGE (c)-[:HAS_ADDRESS]->(a)
-    """
-
-    # Load in batches (smaller batch size for relationships)
-    batch_size = 5000  # Smaller for MATCH operations
-    total_records = len(rel_data)
-    log_interval = 50000
-
-    for i in range(0, total_records, batch_size):
-        batch = rel_data[i:i + batch_size]
-        query.run(cypher, {'batch': batch})
-
-        records_processed = min(i + batch_size, total_records)
-        if records_processed % log_interval == 0 or records_processed == total_records:
-            progress_pct = (records_processed / total_records) * 100
-            log.info(f"  Progress: {records_processed:,} / {total_records:,} ({progress_pct:.1f}%)")
-
-    log.info(f"✓ Created {len(rel_data):,} HAS_ADDRESS relationships")
-```
+**For complete code implementation**, combine the templates from:
+- **Section 0**: Constraint/index creation
+- **Section 4**: Node creation functions with progress logging
+- **Section 5**: Relationship creation functions
+- **Section 6**: Main execution function with proper ordering
 
 **Performance results**:
 - **Without constraints first**: Hours or failure
 - **With constraints first + multi-pass + optimal batching**: Minutes
-- **Key factors**: Constraints, multi-pass strategy, large batch sizes
+- **Key factors**: Constraints created before any data, multi-pass strategy, large batch sizes (10K nodes, 5K relationships)
 
 ---
 
