@@ -1,248 +1,22 @@
-# Neo4j PoV Toolkit
+# 🏢 Companies House → Neo4j
 
-> **From business problem to working Neo4j graph in minutes, not days**
-
-An LLM-powered toolkit that transforms your raw data into a fully functional Neo4j database through natural conversation. No graph expertise required.
-
----
-
-## The Problem
-
-You have a business problem to solve. Maybe it's detecting fraudulent transactions, preventing account takeovers, or identifying synthetic identities. You know Neo4j could help, but there's a frustrating gap between:
-
-> *"I have data in a CSV/Database"*
-
-and
-
-> *"I have a working Neo4j solution"*
-
-That gap is filled with questions:
-- How do I model this data as a graph?
-- What should be nodes? What should be relationships?
-- How do I write the ingestion code?
-- Am I following best practices?
-- **How long will this take?**
-
-Currently, it takes too long. Days or weeks of learning, modeling, coding, and iteration just to see if Neo4j delivers value for your use case.
-
-**This toolkit eliminates that gap.**
-
----
-
-## The Solution: Have a Conversation
-
-Instead of learning graph theory, you have a conversation. Here's how it works:
-
-### Real Example: Fraud Detection
-
-**You**: *"What fraud use cases are available for insurance?"*
-
-**System**:
-> I found 2 insurance fraud use cases:
-> 1. **Claims Fraud** - Detect fraudulent insurance claims
-> 2. **Quote Fraud** - Identify manipulated quote applications
-
-**You**: *"Tell me about Claims Fraud - how does it work?"*
-
-**System**:
-> Claims Fraud detects fraudulent patterns by analyzing connections between claimants, medical professionals, and claims. It identifies:
-> - Multiple claims from same claimant
-> - Medical professionals with suspicious patterns
-> - "Crash for cash" scams (same vehicle, multiple incidents)
+> **⚠️ BRANCH: `companies-house`**
 >
-> **Minimum data needed**:
-> - Claimant IDs
-> - Claim IDs
-> - One identifier type: phone, email, or passport
-
-**You**: *"Can you write code to load my customer data for synthetic identity fraud?"*
-
-**System**:
-> ✅ Matched use case: Synthetic Identity Fraud
+> This is a **specific implementation branch** that loads UK Companies House data into Neo4j.
 >
-> I found your data at `workspace/raw_data/data.csv` with:
-> - customer_id
-> - email
-> - phone
-> - first_name, last_name
->
-> This is perfect! I'll generate a data mapper that:
-> - Creates Customer, Email, and Phone nodes
-> - Establishes HAS_EMAIL and HAS_PHONE relationships
-> - Detects fraud rings automatically
->
-> *[Generates workspace/generated/data_mapper.py]*
-
-**You**: *"Run it"*
-
-**System**:
-```
-Loading customer data...
-✓ Created 100 Customer nodes
-✓ Created 65 Email nodes
-✓ Created 58 Phone nodes
-✓ Created relationships
-⚠️ Fraud Detection: Found 12 shared emails and 15 shared phones
-```
-
-**Minutes later, you have a working Neo4j database ready for fraud detection queries.**
+> Looking for the base toolkit? Switch to the [`main` branch](../../tree/main).
 
 ---
 
-## How It Works
+## What This Branch Does
 
-### 1. Start a Conversation
+This branch contains a complete, working pipeline to:
 
-Open the project in **Claude Code** or **Cursor** and say:
+1. **Download** the UK Companies House Free Data Product (~2.6GB, 5.7M companies)
+2. **Load** it into Neo4j as a fully connected graph
+3. **Query** company relationships, addresses, industries, and name history
 
-> *"Help me with fraud detection"*
-
-or
-
-> *"What use cases are available for financial services?"*
-
-or
-
-> *"Load my customer data into Neo4j"*
-
-### 2. Explore Use Cases
-
-The LLM guides you through available patterns:
-
-- **Financial Services**: Synthetic Identity Fraud, Account Takeover, Transaction Monitoring, Fraud Rings
-- **Insurance**: Claims Fraud, Quote Fraud
-- **Manufacturing**: Supply Chain, BOM Management, Engineering Traceability
-- **Cross-Industry**: Entity Resolution, IT Service Graphs
-
-Each use case comes with:
-- ✅ Battle-tested data model from Neo4j experts
-- ✅ Minimum data requirements
-- ✅ Example queries and detection patterns
-- ✅ Graph Data Science algorithms
-
-### 3. Provide Your Data
-
-Just drop your files in `workspace/raw_data/`:
-
-```bash
-cp ~/my-data/customers.csv workspace/raw_data/
-cp ~/my-data/transactions.json workspace/raw_data/
-```
-
-**Supported formats**: CSV, JSON, Parquet, or any format Python can read
-
-**Minimum data**: Most use cases need surprisingly little:
-- Synthetic Identity Fraud: Just `customer_id` + one PII field (email OR phone)
-- Claims Fraud: Claimant + claim + one connection point
-- Transaction Monitoring: Account + transaction + amounts
-
-### 4. Analyze Your Data
-
-The LLM analyzes your data quality and structure before generating code:
-
-- ✅ Validates required fields are present
-- ✅ Detects nulls, invalid dates, and type mismatches
-- ✅ Identifies outliers and data distributions
-- ✅ Reports compatibility with use case requirements
-
-**Example Analysis Output**:
-```
-⚠️  Data Quality Issues:
-- phone: 120/10,000 rows (1.2%) have null values
-- signup_date: Format "MM/DD/YYYY" needs parsing
-- email: 15 malformed addresses detected
-
-✅ Safe to proceed with data cleaning adaptations
-```
-
-**Why This Matters**:
-- Catches issues BEFORE loading to Neo4j (easier to debug)
-- Adapts code to handle nulls, wrong types, and invalid values
-- Prevents "what happens when a column is broken?" surprises
-
-### 5. Get Working Code
-
-The LLM:
-1. Detects your Neo4j version (4.x, 5.x, 6.x)
-2. Uses data analysis findings to inform code generation
-3. Maps your data to the proven data model
-4. Generates `workspace/generated/data_mapper.py` with data cleaning and transformations
-5. Creates batched, optimized ingestion code with progress logging
-
-### 6. Run and Explore
-
-```bash
-python workspace/generated/data_mapper.py
-```
-
-Your data is now in Neo4j, modeled correctly, ready to:
-- Run fraud detection queries
-- Apply Graph Data Science algorithms
-- Visualize patterns in Neo4j Browser
-- Build dashboards and applications
-
----
-
-## What Makes This Different
-
-### You Don't Need to Know:
-
-❌ Graph modeling theory
-❌ Cypher query language
-❌ Neo4j best practices
-❌ Data ingestion patterns
-❌ Version-specific syntax differences
-
-### You Just Need:
-
-✅ A business problem
-✅ Some data (CSV, JSON, etc.)
-✅ 10 minutes
-
----
-
-## The Value Proposition
-
-### For Users
-
-**Stop thinking. Start seeing value.**
-
-You shouldn't need to become a graph expert to see if Neo4j solves your problem. This toolkit removes every barrier between your data and demonstrable value.
-
-### For Neo4j Teams
-
-**Democratize graph expertise.**
-
-This toolkit captures the collective knowledge of Neo4j's engineering teams, solutions architects, consultants, and field engineers. Accelerate customer demos and POCs from days to minutes.
-
----
-
-## Available Use Cases
-
-The toolkit uses data models from the [Neo4j Industry Use Cases](https://neo4j.com/developer/industry-use-cases/) library:
-
-### Fraud Detection (Financial Services)
-- **Synthetic Identity Fraud** - Find shared PII across supposedly distinct customers
-- **Account Takeover** - Identify compromised accounts through behavioral analysis
-- **Transaction Monitoring** - Detect suspicious patterns in financial transactions
-- **Transaction Fraud Ring** - Uncover networks of coordinated fraudulent activity
-- **Entity Resolution** - Link customer records across systems
-- **Deposit Analysis** - Analyze deposit patterns for suspicious behavior
-
-### Insurance
-- **Claims Fraud** - Detect fraudulent insurance claims and "crash for cash" scams
-- **Quote Fraud** - Identify manipulated quote applications
-
-### Manufacturing
-- **Supply Chain Management** - E.V. route planning and logistics
-- **Product Design** - Configurable BOMs, engineering traceability
-- **Production Optimization** - Process monitoring and CPA
-
-### Cross-Industry
-- **Entity Resolution** - Connect fragmented data across systems
-- **IT Service Graphs** - Infrastructure and service dependency mapping
-
-*As Neo4j adds more use cases to the Industry Use Cases library, this toolkit automatically supports them.*
+**Time to working graph: ~60-90 minutes** (mostly automated loading)
 
 ---
 
@@ -250,122 +24,121 @@ The toolkit uses data models from the [Neo4j Industry Use Cases](https://neo4j.c
 
 ### Prerequisites
 
-- **Neo4j Database** (Desktop, Docker, or Aura)
-- **Python 3.8+**
-- **Claude Code or Cursor** (for LLM orchestration)
+- Neo4j 5.x+ running (Desktop, Docker, or Aura)
+- Python 3.8+
+- `.env` file with Neo4j credentials
 
-### Installation
+### 1. Setup
 
 ```bash
-# 1. Clone and setup
-git clone https://github.com/neo4j/pov-toolkit.git
-cd pov-toolkit
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Clone and checkout this branch
+git clone https://github.com/mkd-neo4j/neo4j-pov-toolkit.git
+cd neo4j-pov-toolkit
+git checkout companies-house
+
+# Install dependencies
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Configure connection
+# Configure Neo4j connection
 cp .env.example .env
-# Edit .env with your Neo4j credentials
-
-# 3. Test connection
-python cli.py neo4j-test
+# Edit .env with your credentials
 ```
 
-**Detailed setup**: See [docs/SETUP.md](docs/SETUP.md)
+### 2. Download the Data
 
-### Start Your First Conversation
-
-Open the project in **Claude Code** or **Cursor** and say:
-
-> *"What fraud detection use cases are available?"*
-
-The LLM will guide you from there.
-
----
-
-## Documentation
-
-- **[Why This Exists](docs/WHY.md)** - The problem we're solving and our philosophy
-- **[Setup Guide](docs/SETUP.md)** - Detailed installation and configuration
-- **[CLI Reference](docs/CLI.md)** - All available commands and options
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Technical Architecture](docs/SOLUTION.md)** - How it works under the hood
-
----
-
-## Philosophy
-
-This is not about building production-grade, enterprise-hardened systems. This is about:
-
-- **Speed**: Minutes to value, not days
-- **Simplicity**: Minimal data, minimal steps
-- **Accessibility**: No graph expertise required
-- **Demonstration**: Prove Neo4j's value quickly
-- **Acceleration**: Remove friction from exploration and POCs
-
----
-
-## Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. **Report Issues** - Found a bug? [Open an issue](https://github.com/neo4j/pov-toolkit/issues)
-2. **Suggest Features** - Have an idea? Let us know!
-3. **Submit Pull Requests** - Code contributions welcome
-4. **Improve Documentation** - Help make the docs better
-5. **Share Use Cases** - Tell us your success stories
-
----
-
-## Project Structure
-
-```
-neo4j-pov-toolkit/
-├── workspace/           # YOUR WORKSPACE
-│   ├── raw_data/       # Drop your data files here
-│   └── generated/      # LLM-generated code appears here
-│
-├── src/                # Pre-built infrastructure
-│   ├── core/          # Neo4j connection, logging, use case scraper
-│   ├── cli/           # CLI commands
-│   └── prompts/       # LLM guidance for data analysis and code generation
-│
-├── docs/               # Documentation
-│   ├── WHY.md         # Why this exists
-│   ├── SETUP.md       # Installation guide
-│   ├── CLI.md         # CLI reference
-│   └── TROUBLESHOOTING.md
-│
-├── cli.py             # Main CLI entry point
-└── .env               # Your Neo4j credentials (create from .env.example)
+```bash
+python3 workspace/scripts/download_companies_house.py
 ```
 
-**You only need to interact with `workspace/`** - everything else is pre-built infrastructure.
+Downloads ~470MB ZIP → extracts to ~2.6GB CSV.
+
+### 3. Load into Neo4j
+
+```bash
+python3 workspace/generated/data_mapper.py
+```
+
+Creates 5.7M Company nodes, addresses, SIC codes, and name history.
+
+### 4. Query!
+
+```cypher
+// Find companies at the same address
+MATCH (a:Address)<-[:HAS_ADDRESS]-(c:Company)
+WHERE a.postCode = 'EC2M 4YF'
+RETURN a.postCode, collect(c.name) as companies
+```
+
+---
+
+## The Graph Model
+
+```
+(:Company)─[:HAS_ADDRESS]──→(:Address)─[:LOCATED_IN]──→(:Country)
+    │
+    ├──[:CLASSIFIED_AS]──→(:SICCode)
+    │
+    └──[:PREVIOUSLY_NAMED]──→(:PreviousName)
+```
+
+| Node | Count | Description |
+|------|-------|-------------|
+| Company | ~5.7M | Every UK registered company |
+| Address | ~4.5M | Registered office addresses |
+| SICCode | ~800 | Industry classification codes |
+| Country | ~100 | Countries of origin/address |
+| PreviousName | ~2M | Historical company names |
+
+---
+
+## Detailed Documentation
+
+📖 **[Full Documentation →](workspace/README.md)**
+
+The workspace README covers:
+- Download script options (`--list`, `--date`, `--keep-zip`)
+- Data mapper phases (run specific phases, resume from failures)
+- Troubleshooting common issues
+- Example Cypher queries
+
+---
+
+## What's Different from `main` Branch
+
+| Aspect | `main` branch | `companies-house` branch |
+|--------|--------------|-------------------------|
+| **Purpose** | Empty toolkit framework | Working Companies House implementation |
+| **workspace/raw_data/** | Empty (placeholder) | Companies House CSV (after download) |
+| **workspace/generated/** | Empty (placeholder) | `data_mapper.py` for Companies House |
+| **workspace/scripts/** | Empty | `download_companies_house.py` |
+| **Use Case** | Starting point for new projects | Reference implementation / UK company data |
+
+---
+
+## Data Source
+
+- **Provider**: [Companies House](https://download.companieshouse.gov.uk/en_output.html)
+- **License**: Open Government Licence (OGL) v3.0
+- **Updates**: Monthly (within 5 working days of month end)
+- **Contains**: All UK registered companies with addresses, SIC codes, status, and name history
+
+---
+
+## About the Toolkit
+
+The underlying toolkit (`main` branch) is an LLM-powered framework that helps you:
+
+1. Discover Neo4j use cases via CLI
+2. Analyze your data for graph modeling
+3. Generate data loading code automatically
+
+This `companies-house` branch is a **complete example** of what the toolkit produces—you can use it as a reference or directly load UK company data into Neo4j.
 
 ---
 
 ## License
 
-[License information here]
-
----
-
-## Support
-
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/neo4j/pov-toolkit/issues)
-- **Community**: [community.neo4j.com](https://community.neo4j.com)
-- **Neo4j**: [neo4j.com](https://neo4j.com)
-
----
-
-## The Goal
-
-When you arrive with a business problem and raw data, you should be able to say:
-
-> *"Here's my problem. Here's my data. Show me what Neo4j can do."*
-
-**And within minutes, you should have your answer.**
-
-That's why this toolkit exists.
+- **Toolkit**: [Your license here]
+- **Data**: Contains public sector information licensed under the Open Government Licence v3.0
