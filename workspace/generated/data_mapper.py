@@ -316,8 +316,8 @@ def create_constraints_and_indexes(query):
         "CREATE INDEX address_postcode IF NOT EXISTS FOR (a:Address) ON (a.postCode)",
         "CREATE INDEX address_posttown IF NOT EXISTS FOR (a:Address) ON (a.postTown)",
         "CREATE INDEX address_country IF NOT EXISTS FOR (a:Address) ON (a.country)",
-        # PreviousName index for name lookups
-        "CREATE INDEX previous_name_name IF NOT EXISTS FOR (pn:PreviousName) ON (pn.name)",
+        # NOTE: No separate PreviousName.name index needed - Company.name covers it
+        # because PreviousName nodes also have the :Company label
     ]
 
     for constraint in constraints:
