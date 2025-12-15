@@ -100,7 +100,11 @@ handler.setFormatter(formatter)
 # All toolkit code should import and use this 'log' instance
 log = logging.getLogger('neo4j-pov-toolkit')
 log.setLevel(logging.INFO)
-log.addHandler(handler)
+
+# Guard against duplicate handlers on reimport (e.g., importlib.reload())
+# Unlike logging.basicConfig() which is idempotent, manual addHandler() is not
+if not log.handlers:
+    log.addHandler(handler)
 
 # Prevent propagation to avoid duplicate logs
 log.propagate = False
