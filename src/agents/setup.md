@@ -1,13 +1,13 @@
 # Connection Setup & Version Detection
 
-> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+> **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
 > If NO → Read it NOW before proceeding. It contains critical context about:
 > - Your mission and core principles
 > - When to read this file vs others
 > - Essential tools and workflows
 >
-> This supporting prompt assumes you've already read PROMPT.md.
+> This supporting agent assumes you've already read AGENT.md.
 
 ---
 
@@ -247,6 +247,6 @@ Ready to help load your data. What use case are you implementing?
 ---
 
 See also:
-- `../PROMPT.md` - Overall guidance
+- `../AGENT.md` - Overall guidance
 - `discover_usecase.md` - Next step: selecting use case
 - `load_data.md` - How to use version info when generating code

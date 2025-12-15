@@ -1,13 +1,13 @@
 # Data Model Discovery & Exploration
 
-> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+> **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
 > If NO → Read it NOW before proceeding. It contains critical context about:
 > - Your mission and core principles
 > - When to read this file vs others
 > - Essential tools and workflows
 >
-> This supporting prompt assumes you've already read PROMPT.md.
+> This supporting agent assumes you've already read AGENT.md.
 
 ---
 
@@ -881,7 +881,7 @@ Then proceed to analyze user's data files in `workspace/raw_data/`.
 ---
 
 See also:
-- `../PROMPT.md` - Overall guidance
+- `../AGENT.md` - Overall guidance
 - `discover_usecase.md` - Use case discovery (complementary approach)
 - `setup.md` - Connection validation
 - `analyze_data.md` - Data quality validation & structure analysis

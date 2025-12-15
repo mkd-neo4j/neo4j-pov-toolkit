@@ -329,7 +329,7 @@ neo4j-pov-toolkit/
 ├── src/                # Pre-built infrastructure
 │   ├── core/          # Neo4j connection, logging, use case scraper
 │   ├── cli/           # CLI commands
-│   └── prompts/       # LLM guidance for data analysis and code generation
+│   └── agents/        # LLM guidance for data analysis and code generation
 │
 ├── docs/               # Documentation
 │   ├── WHY.md         # Why this exists

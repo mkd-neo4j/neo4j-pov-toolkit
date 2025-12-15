@@ -60,8 +60,8 @@ neo4j-pov-toolkit/
 │       ├── commands/                  # Command implementations
 │       └── utils/                     # CLI utilities
 │
-├── prompts/                            # Markdown prompts for LLM orchestration
-│   ├── README.md                      # How the prompt system works
+├── agents/                             # Markdown agents for LLM orchestration
+│   ├── README.md                      # How the agent system works
 │   ├── 00_setup.md                    # Step 0: Connection & version detection
 │   ├── 01_discover_usecase.md         # Step 1: Fetch use cases from website
 │   ├── 02_analyze_data.md             # Step 2: Understand CSV structure
@@ -171,13 +171,13 @@ The user can:
 
 ## Prompt-Driven Workflow
 
-The prompts are **markdown files** that guide the LLM through a structured conversation. They don't contain hardcoded use cases instead, they instruct the LLM to fetch information dynamically from the Neo4j website.
+The agents are **markdown files** that guide the LLM through a structured conversation. They don't contain hardcoded use cases instead, they instruct the LLM to fetch information dynamically from the Neo4j website.
 
-### Why Markdown Prompts?
+### Why Markdown Agents?
 
 1. **Human-readable**: Easy to understand and modify
 2. **Version-controllable**: Track changes over time
-3. **Self-documenting**: The prompt explains what it does
+3. **Self-documenting**: The agent explains what it does
 4. **Dynamic**: Fetch use cases from website, don't hardcode them
 
 ## Critical Context

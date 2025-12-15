@@ -85,7 +85,7 @@ The toolkit brings together:
 
 1. **Common Data Models**: Pre-built graph models from the [Neo4j Industry Use Cases](https://neo4j.com/developer/industry-use-cases/) library, created and maintained by Neo4j experts. These models represent the gold standard for structuring data for specific business problems.
 2. **LLM-Powered Code Generation**: Automatic creation of ingestion pipelines tailored to your data, mapping it to the appropriate common data model
-3. **Neo4j Domain Expertise**: Best practices from engineers, consultants, and field teams distilled into prompts and patterns
+3. **Neo4j Domain Expertise**: Best practices from engineers, consultants, and field teams distilled into agents and patterns
 4. **Minimal Friction Workflow**: Drop data in a folder, run a command, get results
 
 The repository provides:

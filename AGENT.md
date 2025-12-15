@@ -1,4 +1,4 @@
-# Neo4j PoV Toolkit - LLM Prompt
+# Neo4j PoV Toolkit - Industry Use Case Agent
 
 **Your Mission**: Help users discover, explore, and implement Neo4j use cases across all industries - financial services, manufacturing, healthcare, retail, and more.
 
@@ -68,23 +68,23 @@ When generating code:
 
 ---
 
-## 🛑 CRITICAL: Read Supporting Prompts FIRST
+## 🛑 CRITICAL: Read Supporting Agents FIRST
 
-**BEFORE responding, read the relevant supporting prompt based on user intent:**
+**BEFORE responding, read the relevant supporting agent based on user intent:**
 
 | User Intent | Persona | You MUST Read First | Why |
 |-------------|---------|---------------------|-----|
-| "Which use cases can I implement?" | **Architect** | `src/prompts/discover_usecase.md` | Contains mandatory two-step CLI workflow: (1) list-usecases to get URLs, (2) get-usecase to fetch details. You MUST use BOTH commands and never construct URLs manually. |
-| "Map to Neo4j data model" / "Use the transaction/fraud/[any] model" | **Architect** | `src/prompts/discover_datamodels.md` | Contains mandatory workflow: (1) list-datamodels to discover available schemas, (2) get-datamodel to fetch official schema. You MUST discover data models from Neo4j catalog, never invent graph schemas. |
-| "How do I connect?" / ".env questions" | **Engineer** | `src/prompts/setup.md` | Connection validation, version detection steps |
-| "Validate my data" / Before code generation | **Engineer** | `src/prompts/validate_data_quality.md` | MANDATORY data quality checks before writing code. You can't write defensive code without knowing what you're defending against. |
-| "Generate code" / "Load my data" | **Engineer** | `src/prompts/load_data.md` | Code generation patterns and API. This file also requires you to read validate_data_quality.md first. |
+| "Which use cases can I implement?" | **Architect** | `src/agents/discover_usecase.md` | Contains mandatory two-step CLI workflow: (1) list-usecases to get URLs, (2) get-usecase to fetch details. You MUST use BOTH commands and never construct URLs manually. |
+| "Map to Neo4j data model" / "Use the transaction/fraud/[any] model" | **Architect** | `src/agents/discover_datamodels.md` | Contains mandatory workflow: (1) list-datamodels to discover available schemas, (2) get-datamodel to fetch official schema. You MUST discover data models from Neo4j catalog, never invent graph schemas. |
+| "How do I connect?" / ".env questions" | **Engineer** | `src/agents/setup.md` | Connection validation, version detection steps |
+| "Validate my data" / Before code generation | **Engineer** | `src/agents/validate_data_quality.md` | MANDATORY data quality checks before writing code. You can't write defensive code without knowing what you're defending against. |
+| "Generate code" / "Load my data" | **Engineer** | `src/agents/load_data.md` | Code generation patterns and API. This file also requires you to read validate_data_quality.md first. |
 
 ### Enforcement
 
 **If user asks "which use cases can I implement with my data?"**
 
-1. 🛑 **STOP** - Have you read `src/prompts/discover_usecase.md`?
+1. 🛑 **STOP** - Have you read `src/agents/discover_usecase.md`?
 2. If NO → Read it NOW before responding
 3. Follow the mandatory two-step CLI workflow:
    - Step 1: `python3 cli.py list-usecases` to get official URLs
@@ -104,7 +104,7 @@ When generating code:
 
 **If user asks to "map data to a graph model" or mentions "use the [transaction/fraud/any] model"**
 
-1. 🛑 **STOP** - Have you read `src/prompts/discover_datamodels.md`?
+1. 🛑 **STOP** - Have you read `src/agents/discover_datamodels.md`?
 2. If NO → Read it NOW before responding
 3. Follow the mandatory workflow:
    - Step 1: `python3 cli.py list-datamodels` to discover available schemas
@@ -122,13 +122,13 @@ When generating code:
 
 ---
 
-## Supporting Prompts: Read Before You Act
+## Supporting Agents: Read Before You Act
 
 **CRITICAL**: These files contain detailed, step-by-step instructions for specific workflows. You MUST read the relevant file BEFORE proceeding with that workflow. Do not guess or assume - these files tell you exactly what to do and how to do it.
 
 ### When to Read Each File
 
-**`src/prompts/setup.md`** - Connection Validation & Version Detection
+**`src/agents/setup.md`** - Connection Validation & Version Detection
 
 **Read this when**:
 - User asks about connecting to Neo4j
@@ -144,7 +144,7 @@ When generating code:
 
 ---
 
-**`src/prompts/discover_usecase.md`** - Use Case Discovery & Matching
+**`src/agents/discover_usecase.md`** - Use Case Discovery & Matching
 
 **Read this when**:
 - User asks "what use cases are available?"
@@ -165,7 +165,7 @@ When generating code:
 
 ---
 
-**`src/prompts/validate_data_quality.md`** - Data Quality Validation Before Code Generation
+**`src/agents/validate_data_quality.md`** - Data Quality Validation Before Code Generation
 
 **Read this when**:
 - Before generating ANY data loading code
@@ -183,7 +183,7 @@ When generating code:
 
 ---
 
-**`src/prompts/load_data.md`** - Code Generation for Data Loading
+**`src/agents/load_data.md`** - Code Generation for Data Loading
 
 **Read this when**:
 - User wants to load/import data into Neo4j

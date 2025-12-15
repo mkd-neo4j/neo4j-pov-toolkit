@@ -1,13 +1,13 @@
 # Data Mapper Code Generation
 
-> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+> **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
 > If NO → Read it NOW before proceeding. It contains critical context about:
 > - Your mission and core principles
 > - When to read this file vs others
 > - Essential tools and workflows
 >
-> This supporting prompt assumes you've already read PROMPT.md.
+> This supporting agent assumes you've already read AGENT.md.
 
 ---
 
@@ -806,7 +806,7 @@ def verify_load(query):
 
 ## See Also
 
-- `../PROMPT.md` - Overall toolkit guidance
+- `../AGENT.md` - Overall toolkit guidance
 - `discover_usecase.md` - How to fetch official use cases
 - `setup.md` - Connection validation (if needed for Cypher version)
 - Working example: `workspace/generated/data_mapper.py`

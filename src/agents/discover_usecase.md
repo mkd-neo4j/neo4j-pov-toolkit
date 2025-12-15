@@ -1,13 +1,13 @@
 # Use Case Discovery & Matching
 
-> **🛑 STOP**: Have you read [PROMPT.md](../../PROMPT.md)?
+> **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
 > If NO → Read it NOW before proceeding. It contains critical context about:
 > - Your mission and core principles
 > - When to read this file vs others
 > - Essential tools and workflows
 >
-> This supporting prompt assumes you've already read PROMPT.md.
+> This supporting agent assumes you've already read AGENT.md.
 
 ---
 
@@ -390,7 +390,7 @@ Required minimum data:
 ---
 
 See also:
-- `../PROMPT.md` - Overall guidance
+- `../AGENT.md` - Overall guidance
 - `setup.md` - Connection validation (next step)
 - `analyze_data.md` - Data quality validation & structure analysis
 - `load_data.md` - Code generation (final step)
