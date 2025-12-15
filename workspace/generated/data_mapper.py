@@ -252,6 +252,17 @@ def batch_generator(iterable, batch_size):
         yield batch
 
 
+def format_progress(current, total):
+    """
+    Format progress message with percentage.
+    Handles zero total_rows case (when --skip-row-count is used).
+    """
+    if total > 0:
+        return f"{current:,} / {total:,} ({current / total * 100:.1f}%)"
+    else:
+        return f"{current:,} processed"
+
+
 # =============================================================================
 # SCHEMA SETUP
 # =============================================================================
@@ -343,7 +354,7 @@ def extract_and_create_country_nodes(query, total_rows):
 
         # Progress logging
         if (i + 1) % LOG_INTERVAL == 0:
-            log.info(f"  Country scan: {i + 1:,} / {total_rows:,} ({(i + 1) / total_rows * 100:.1f}%)")
+            log.info(f"  Country scan: {format_progress(i + 1, total_rows)}")
 
     log.info(f"Found {len(countries)} unique countries")
 
@@ -384,7 +395,7 @@ def extract_and_create_sic_codes(query, total_rows):
 
         # Progress logging
         if (i + 1) % LOG_INTERVAL == 0:
-            log.info(f"  SIC scan progress: {i + 1:,} / {total_rows:,} ({(i + 1) / total_rows * 100:.1f}%)")
+            log.info(f"  SIC scan progress: {format_progress(i + 1, total_rows)}")
 
     log.info(f"Found {len(sic_codes):,} unique SIC codes")
 
@@ -479,8 +490,9 @@ def create_company_nodes(query, total_rows):
             query.run(cypher, {"batch": batch_data})
 
         processed += len(batch_data)
-        if (processed + skipped) % LOG_INTERVAL == 0 or (processed + skipped) >= total_rows:
-            log.info(f"  Company nodes: {processed:,} / {total_rows:,} ({processed / total_rows * 100:.1f}%)")
+        total_seen = processed + skipped
+        if total_seen % LOG_INTERVAL == 0 or (total_rows > 0 and total_seen >= total_rows):
+            log.info(f"  Company nodes: {format_progress(processed, total_rows)}")
 
     if skipped > 0:
         log.warning(f"  Skipped {skipped:,} rows with null/empty CompanyNumber")
@@ -564,8 +576,8 @@ def create_address_nodes_and_relationships(query, total_rows):
 
         processed += len(batch_data)
         total_seen = processed + skipped_address + skipped_company
-        if total_seen % LOG_INTERVAL == 0 or total_seen >= total_rows:
-            log.info(f"  Address nodes: {processed:,} / {total_rows:,} ({total_seen / total_rows * 100:.1f}%)")
+        if total_seen % LOG_INTERVAL == 0 or (total_rows > 0 and total_seen >= total_rows):
+            log.info(f"  Address nodes: {format_progress(processed, total_rows)}")
 
     if skipped_address > 0:
         log.warning(f"  Skipped {skipped_address:,} rows with incomplete address")
@@ -640,8 +652,8 @@ def create_company_sic_relationships(query, total_rows):
 
         processed += rows_processed_in_batch
         total_seen = processed + skipped
-        if total_seen % LOG_INTERVAL == 0 or total_seen >= total_rows:
-            log.info(f"  SIC relationships: {total_seen:,} / {total_rows:,} ({total_seen / total_rows * 100:.1f}%)")
+        if total_seen % LOG_INTERVAL == 0 or (total_rows > 0 and total_seen >= total_rows):
+            log.info(f"  SIC relationships: {format_progress(total_seen, total_rows)}")
 
     if skipped > 0:
         log.warning(f"  Skipped {skipped:,} rows with null CompanyNumber")
@@ -712,8 +724,8 @@ def create_previous_name_nodes_and_relationships(query, total_rows):
 
         processed += rows_processed_in_batch
         total_seen = processed + skipped
-        if total_seen % LOG_INTERVAL == 0 or total_seen >= total_rows:
-            log.info(f"  Previous names: {total_seen:,} / {total_rows:,} ({total_seen / total_rows * 100:.1f}%)")
+        if total_seen % LOG_INTERVAL == 0 or (total_rows > 0 and total_seen >= total_rows):
+            log.info(f"  Previous names: {format_progress(total_seen, total_rows)}")
 
     if skipped > 0:
         log.warning(f"  Skipped {skipped:,} rows with null CompanyNumber")
