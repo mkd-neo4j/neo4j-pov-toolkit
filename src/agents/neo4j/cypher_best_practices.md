@@ -18,6 +18,50 @@ This agent provides authoritative Neo4j best practices aggregated from official 
 
 ---
 
+## ⚠️ CRITICAL: Use Native Cypher Only - No APOC
+
+**ALL patterns in this guide use standard Neo4j Cypher.**
+
+### DO NOT Use APOC Procedures
+
+❌ **Never use**:
+```cypher
+// APOC is a plugin - may not be installed!
+CALL apoc.periodic.iterate(...)
+CALL apoc.load.csv(...)
+CALL apoc.create.node(...)
+CALL apoc.merge.node(...)
+CALL apoc.do.when(...)
+```
+
+✅ **Always use native Cypher**:
+```cypher
+// Works on any Neo4j instance
+UNWIND $batch AS row
+MERGE (n:Node {id: row.id})
+SET n.property = row.value
+```
+
+### Why No APOC?
+
+1. **APOC is a plugin**, not part of core Neo4j
+2. **Not guaranteed to be installed** in customer environments
+3. **Generated code must work everywhere** without additional dependencies
+4. **Native Cypher is faster** for bulk operations with proper indexing
+5. **APOC may be disabled** for security reasons in enterprise environments
+
+### What to Use Instead
+
+| APOC Procedure | Native Cypher Alternative |
+|----------------|--------------------------|
+| `apoc.periodic.iterate()` | Manual batching with `UNWIND $batch` |
+| `apoc.load.csv()` | Python CSV reading + parameterized queries |
+| `apoc.create.node()` | `CREATE` or `MERGE` statements |
+| `apoc.merge.node()` | `MERGE` with `ON CREATE SET` / `ON MATCH SET` |
+| `apoc.do.when()` | `CASE` expressions or conditional logic in Python |
+
+---
+
 ## Core Modeling Principles
 
 ### Start with Use Cases
@@ -430,6 +474,105 @@ SET c.firstName = row.first_name,
 - Complex relationships: 1000-5000 per batch
 - Heavy properties: 500-1000 per batch
 
+**Batch size by dataset scale** (based on production experience):
+
+| Dataset Size | Node Batch Size | Relationship Batch Size |
+|--------------|----------------|------------------------|
+| <10K records | 1,000 | 500 |
+| 10K-100K | 5,000 | 2,500 |
+| 100K-1M | 10,000 | 5,000 |
+| 1M-10M | 10,000-15,000 | 5,000-7,500 |
+| >10M | 15,000-20,000 | 7,500-10,000 |
+
+**Why scale batch size with data volume**:
+- Larger batches = fewer transactions = less overhead
+- Memory usage is manageable with proper data structures
+- For 5.6M records: 10K batch = 560 transactions vs 1K batch = 5,600 transactions
+
+### Large-Scale Loading Strategy (>1M records)
+
+**For datasets with millions of records, use multi-pass loading.**
+
+**Pattern**: Load all nodes FIRST, then all relationships.
+
+```python
+# Multi-pass loading for 5.6M companies + addresses
+def main():
+    query = get_query()
+
+    # STEP 0: Constraints and indexes FIRST
+    create_constraints_and_indexes(query)
+
+    # STEP 1: All Company nodes (uses constraint for fast MERGE)
+    create_company_nodes(query, data, batch_size=10000)
+
+    # STEP 2: All Address nodes (uses constraint for fast MERGE)
+    create_address_nodes(query, data, batch_size=10000)
+
+    # STEP 3: All relationships (fast - both sides use indexed lookups)
+    create_has_address_relationships(query, data, batch_size=5000)
+```
+
+**Why multi-pass is faster for large scale**:
+1. Each operation is isolated and optimized
+2. Relationship creation uses indexed lookups (constraints created first)
+3. No nested MERGE operations (which multiply complexity)
+4. Better memory usage and transaction management
+5. Progress visibility per operation
+
+**When to use multi-pass**:
+- ✅ Datasets with >1M records
+- ✅ Multiple node types
+- ✅ Complex relationship patterns
+- ✅ Production environments
+
+**When single-pass might work**:
+- Small datasets (<10K records)
+- Simple data model (one node type)
+- Prototype/development only
+
+### Constraint Creation Timing
+
+**CRITICAL**: Timing of constraint creation affects performance dramatically.
+
+**The correct order**:
+1. **BEFORE data load**: Create all unique constraints (on identifier properties)
+2. **BEFORE data load**: Create indexes on properties used in MATCH clauses
+3. **Load data**: All nodes, then all relationships
+4. **AFTER data load (optional)**: Additional indexes for query optimization
+
+```python
+def create_constraints_and_indexes(query):
+    """Must be called BEFORE any data loading."""
+    # Unique constraints (automatically indexed)
+    constraints = [
+        "CREATE CONSTRAINT company_id_unique IF NOT EXISTS FOR (c:Company) REQUIRE c.companyId IS UNIQUE",
+        "CREATE CONSTRAINT address_id_unique IF NOT EXISTS FOR (a:Address) REQUIRE a.addressId IS UNIQUE"
+    ]
+
+    # Regular indexes for lookup properties
+    indexes = [
+        "CREATE INDEX company_name IF NOT EXISTS FOR (c:Company) ON (c.name)",
+        "CREATE INDEX address_postcode IF NOT EXISTS FOR (a:Address) ON (a.postcode)"
+    ]
+
+    for constraint in constraints:
+        query.run(constraint)
+
+    for index in indexes:
+        query.run(index)
+```
+
+**Performance impact**:
+- **Constraints first**: MERGE operations are O(log n) - fast
+- **No constraints**: MERGE operations are O(n) - catastrophically slow
+- **For 5.6M records**: Minutes vs hours/failure
+
+**Never**:
+- ❌ Load data without constraints
+- ❌ Create constraints mid-load (causes locking)
+- ❌ Create constraints after loading millions of records (slow retroactive indexing)
+
 ### Clean and Deduplicate Data
 - **Validate data** before insertion
 - Remove duplicates in preprocessing
@@ -724,28 +867,47 @@ def validate_customer_data(record):
 ## Key Takeaways
 
 ### Always Do
-1. ✅ Use **CamelCase** for node labels
-2. ✅ Use **UPPER_SNAKE_CASE** for relationship types
-3. ✅ Use **camelCase** for properties
-4. ✅ Create **unique constraints** before loading data
-5. ✅ **Anchor queries** on indexed properties
-6. ✅ Use **specific relationship types**
-7. ✅ **Batch operations** with `UNWIND $batch`
-8. ✅ **Profile queries** to identify bottlenecks
-9. ✅ **Validate data** before insertion
-10. ✅ **Prevent supernodes** with intermediate structures
+
+**Performance & Scale (CRITICAL)**:
+1. ✅ **Use native Cypher only** - no APOC dependencies
+2. ✅ Create **unique constraints BEFORE loading data** - enables O(log n) MERGE operations
+3. ✅ **Multi-pass loading** for large datasets (>1M): all nodes first, then relationships
+4. ✅ **Scale batch sizes** with data volume (10K+ for millions of records)
+5. ✅ Create **indexes on lookup properties** - not just unique constraints
+6. ✅ **Profile queries** to identify bottlenecks and validate optimization
+
+**Naming & Conventions**:
+7. ✅ Use **CamelCase** for node labels (e.g., `Company`, `EmailAddress`)
+8. ✅ Use **UPPER_SNAKE_CASE** for relationship types (e.g., `HAS_ADDRESS`, `WORKS_AT`)
+9. ✅ Use **camelCase** for properties (e.g., `companyId`, `firstName`)
+
+**Data Modeling**:
+10. ✅ **Anchor queries** on indexed properties
+11. ✅ Use **specific relationship types** (not `RELATED_TO`)
+12. ✅ **Batch operations** with `UNWIND $batch`
+13. ✅ **Validate data** before insertion
+14. ✅ **Prevent supernodes** with intermediate structures
 
 ### Never Do
-1. ❌ Use inconsistent naming conventions
-2. ❌ Create symmetric (bidirectional) relationships
-3. ❌ Skip constraints on unique identifiers
-4. ❌ Use generic relationship types (`RELATED_TO`)
-5. ❌ Load data without batching (for large datasets)
-6. ❌ Create nodes without validation
-7. ❌ Allow supernode formation
-8. ❌ Use foreign key properties instead of relationships
-9. ❌ Skip query profiling for critical paths
-10. ❌ Deploy without testing on representative data
+
+**Performance Killers (CRITICAL)**:
+1. ❌ **Use APOC procedures** - may not be installed, breaks portability
+2. ❌ **Load data without constraints first** - catastrophic for large datasets (hours vs minutes)
+3. ❌ **Create indexes after loading millions of records** - very slow retroactive indexing
+4. ❌ **Use small batch sizes for large datasets** - inefficient transaction overhead
+5. ❌ **Combine node and relationship creation** at scale - nested operations are expensive
+
+**Data Modeling Errors**:
+6. ❌ Use inconsistent naming conventions
+7. ❌ Create symmetric (bidirectional) relationships
+8. ❌ Skip constraints on unique identifiers
+9. ❌ Use generic relationship types (`RELATED_TO`)
+10. ❌ Load data without batching (for large datasets)
+11. ❌ Create nodes without validation
+12. ❌ Allow supernode formation
+13. ❌ Use foreign key properties instead of relationships
+14. ❌ Skip query profiling for critical paths
+15. ❌ Deploy without testing on representative data
 
 ---
 
