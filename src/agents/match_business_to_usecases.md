@@ -1,4 +1,4 @@
-# Use Case Discovery & Matching
+# Matching Business Problems to Neo4j Use Cases
 
 > **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
@@ -11,7 +11,7 @@
 
 ---
 
-**Reference guide for selecting fraud detection use cases from Neo4j's official catalog.**
+**Reference guide for matching your business problem to official Neo4j use cases across all industries.**
 
 ---
 
@@ -391,6 +391,6 @@ Required minimum data:
 
 See also:
 - `../AGENT.md` - Overall guidance
-- `setup.md` - Connection validation (next step)
-- `analyze_data.md` - Data quality validation & structure analysis
-- `load_data.md` - Code generation (final step)
+- `validate_neo4j_connection.md` - Connection validation (next step)
+- `analyze_data_quality.md` - Data quality analysis & structure validation
+- `generate_data_loader_code.md` - Code generation (final step)

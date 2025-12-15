@@ -1,4 +1,4 @@
-# Data Quality Validation Before Code Generation
+# Analyzing Data Quality Before Code Generation
 
 > **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
@@ -11,7 +11,7 @@
 
 ---
 
-**Reference guide for validating raw data quality and structure before generating data mapper code.**
+**Reference guide for analyzing raw data quality and structure before generating data loader code.**
 
 ---
 
@@ -26,17 +26,17 @@
 - Ensuring the code won't crash due to bad data
 
 **What you DO as Engineer**:
-- Validate data quality: nulls, types, invalid values, distributions
+- Analyze data quality: nulls, types, invalid values, distributions
 - Sample large files strategically (can't load 4GB into memory)
 - Check for data issues that will break code execution
 - Report findings with specific counts and percentages
 - Recommend transformations and defensive handling strategies
-- Present validation results in Cypher-style format showing data quality annotations
+- Present analysis results in Cypher-style format showing data quality annotations
 
 **What you DON'T do as Engineer (in this file)**:
 - ❌ Schema mapping - that's Architect work (already done in Phase 1)
 - ❌ Use case discovery - that's Architect work
-- ❌ Write code yet - that comes next in load_data.md
+- ❌ Write code yet - that comes next in generate_data_loader_code.md
 
 **Critical principle**:
 > **"You can't write defensive code if you don't know what you're defending against"** - Pedro Leitao
@@ -60,7 +60,7 @@
 
 **Output format**:
 ```cypher
-// Validated Mapping with Data Quality Annotations
+// Analyzed Mapping with Data Quality Annotations
 
 (:Customer {
   customerId: customer_id,           // ✓ 100% unique, no nulls
@@ -77,8 +77,8 @@
 })
 ```
 
-**Next steps after validation**:
-"Data quality validation complete. Proceeding to code generation with defensive handling for identified issues."
+**Next steps after analysis**:
+"Data quality analysis complete. Proceeding to code generation with defensive handling for identified issues."
 
 ---
 
@@ -88,7 +88,7 @@
 
 ### The Professional Standard: Validate → Transform → Load
 
-**Data engineers and data scientists ALWAYS validate data quality before production loads.** This is not optional. This is not "analysis for fun." This is the standard professional practice.
+**Data engineers and data scientists ALWAYS analyze data quality before production loads.** This is not optional. This is not "analysis for fun." This is the standard professional practice.
 
 **Why**:
 1. **You can't write defensive code if you don't know what you're defending against**
@@ -124,22 +124,22 @@ You need strategic sampling and validation because:
 
 ---
 
-## When to Run Data Quality Validation
+## When to Analyze Data Quality
 
-**ALWAYS validate data before code generation when**:
+**ALWAYS analyze data before code generation when**:
 1. User provides new/unknown data files
 2. Use case has strict requirements (data types, required fields)
 3. Data comes from unsophisticated sources (likely to be "a load of shite")
 4. Previous loads failed or had warnings
 
-**You can SKIP validation when**:
-1. Regenerating code for already-validated data
-2. User explicitly says "skip validation, just generate code"
+**You can SKIP analysis when**:
+1. Regenerating code for already-analyzed data
+2. User explicitly says "skip analysis, just generate code"
 3. Working with known, clean example datasets
 
 ---
 
-## Core Validation Steps
+## Core Analysis Steps
 
 ### 1. File Discovery & Format Detection
 
@@ -413,14 +413,14 @@ Using stratified sample of 10,000 rows for validation...
 
 ---
 
-## Validation Report Format
+## Analysis Report Format
 
 **Present findings clearly to user using Cypher-style syntax for schema mappings**:
 
 ```markdown
-## Data Quality Validation Report
+## Data Quality Analysis Report
 
-### Files Validated
+### Files Analyzed
 - customers.csv (512 KB, 10,000 rows)
 - transactions.json (2.3 MB, 50,000 records)
 
@@ -564,7 +564,7 @@ Generate data_mapper.py with:
 
 ## Integration with Code Generation
 
-**After validation, pass findings to load_data.md**:
+**After analysis, pass findings to generate_data_loader_code.md**:
 
 1. **Field Mapping**:
    - Source field → Use case property mappings
@@ -630,6 +630,6 @@ Data quality validation answers this question BEFORE the code runs.
 
 ## See Also
 
-- `load_data.md` - Uses validation findings to generate code
-- `discover_usecase.md` - Defines required fields and data model
-- Working example: Sample data quality validation before generation
+- `generate_data_loader_code.md` - Uses analysis findings to generate code
+- `match_business_to_usecases.md` - Defines required fields and data model
+- Working example: Sample data quality analysis before generation

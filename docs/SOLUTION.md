@@ -61,11 +61,11 @@ neo4j-pov-toolkit/
 │       └── utils/                     # CLI utilities
 │
 ├── agents/                             # Markdown agents for LLM orchestration
-│   ├── README.md                      # How the agent system works
-│   ├── 00_setup.md                    # Step 0: Connection & version detection
-│   ├── 01_discover_usecase.md         # Step 1: Fetch use cases from website
-│   ├── 02_analyze_data.md             # Step 2: Understand CSV structure
-│   └── 03_load_data.md                # Step 3: Generate data_mapper.py
+│   ├── validate_neo4j_connection.md   # Validate connection & detect version
+│   ├── match_business_to_usecases.md  # Match user problem to Neo4j use cases
+│   ├── fetch_neo4j_data_models.md     # Fetch official Neo4j data models
+│   ├── analyze_data_quality.md        # Analyze data quality before code gen
+│   └── generate_data_loader_code.md   # Generate data_mapper.py code
 │
 ├── docs/
 │   ├── WHY.md                         # Why this toolkit exists

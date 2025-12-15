@@ -1,4 +1,4 @@
-# Data Mapper Code Generation
+# Generating Data Loader Code
 
 > **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
@@ -11,7 +11,7 @@
 
 ---
 
-**Reference guide for generating data_mapper.py code that loads data into Neo4j.**
+**Reference guide for generating the data_mapper.py code that will load your data into Neo4j.**
 
 ---
 
@@ -27,7 +27,7 @@
 
 **What you DO as Engineer**:
 - Generate workspace/generated/data_mapper.py with production-ready code
-- Implement defensive handling based on validation findings from validate_data_quality.md
+- Implement defensive handling based on analysis findings from analyze_data_quality.md
 - Use toolkit API correctly (discover by reading src/core/neo4j/)
 - Follow data model mappings from Phase 1 (Architect work)
 - Include progress logging, error handling, and cleanup
@@ -36,12 +36,12 @@
 **What you DON'T do as Engineer (in this file)**:
 - ❌ Schema mapping - that's Architect work (already done in Phase 1)
 - ❌ Use case discovery - that's Architect work
-- ❌ Skip data validation - you MUST read validate_data_quality.md first
+- ❌ Skip data analysis - you MUST read analyze_data_quality.md first
 
 **Prerequisites before using this file**:
-1. **Phase 1 complete**: Architectural mapping done (discover_datamodels.md)
-2. **Data validated**: Quality checks complete (validate_data_quality.md)
-3. **Connection verified**: Neo4j accessible and version known (setup.md if needed)
+1. **Phase 1 complete**: Architectural mapping done (fetch_neo4j_data_models.md)
+2. **Data analyzed**: Quality checks complete (analyze_data_quality.md)
+3. **Connection verified**: Neo4j accessible and version known (validate_neo4j_connection.md if needed)
 
 **Your workflow**:
 1. Read validation findings (nulls, types, transformations needed)
@@ -101,7 +101,7 @@ Data engineers and data scientists **always** validate data before production lo
 
 ### What to Do
 
-**Read and follow**: [validate_data_quality.md](validate_data_quality.md)
+**Read and follow**: [analyze_data_quality.md](analyze_data_quality.md)
 
 This guide covers:
 - How to sample large files strategically
@@ -603,7 +603,7 @@ Before generating code, present the planned mappings using Cypher syntax with in
 
 ### Annotate with Data Quality Notes
 
-When you've validated the data (using validate_data_quality.md), include data quality findings in comments:
+When you've analyzed the data (using analyze_data_quality.md), include data quality findings in comments:
 
 ```cypher
 // Mapping with Data Quality Notes
@@ -807,6 +807,6 @@ def verify_load(query):
 ## See Also
 
 - `../AGENT.md` - Overall toolkit guidance
-- `discover_usecase.md` - How to fetch official use cases
-- `setup.md` - Connection validation (if needed for Cypher version)
+- `match_business_to_usecases.md` - How to fetch official use cases
+- `validate_neo4j_connection.md` - Connection validation (if needed for Cypher version)
 - Working example: `workspace/generated/data_mapper.py`

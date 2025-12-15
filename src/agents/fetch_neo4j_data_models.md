@@ -1,4 +1,4 @@
-# Data Model Discovery & Exploration
+# Fetching Official Neo4j Data Models
 
 > **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
@@ -11,7 +11,7 @@
 
 ---
 
-**Reference guide for discovering and exploring Neo4j data models from the official catalog.**
+**Reference guide for fetching and adapting official Neo4j data models from the catalog.**
 
 ---
 
@@ -119,7 +119,7 @@ The Cypher-style mapping above IS your complete Phase 1 deliverable. Present it 
 
 When user explicitly requests multi-phase work (e.g., "Phase 1: mapping, Phase 2: code generation"):
 - **Phase 1 (Architect)**: Present the Cypher mapping, confirm completion with simple text like "Phase 1 complete. Ready to iterate or move to Phase 2?"
-- **Phase 2 (Engineer)**: Switch personas only when user explicitly requests it. Read validate_data_quality.md and load_data.md first.
+- **Phase 2 (Engineer)**: Switch personas only when user explicitly requests it. Read analyze_data_quality.md and generate_data_loader_code.md first.
 
 **CRITICAL**: Architects present schema mappings as deliverables, not as plans. The mapping is the work product itself.
 
@@ -882,7 +882,7 @@ Then proceed to analyze user's data files in `workspace/raw_data/`.
 
 See also:
 - `../AGENT.md` - Overall guidance
-- `discover_usecase.md` - Use case discovery (complementary approach)
-- `setup.md` - Connection validation
-- `analyze_data.md` - Data quality validation & structure analysis
-- `load_data.md` - Code generation using data models
+- `match_business_to_usecases.md` - Use case discovery (complementary approach)
+- `validate_neo4j_connection.md` - Connection validation
+- `analyze_data_quality.md` - Data quality analysis & structure validation
+- `generate_data_loader_code.md` - Code generation using data models

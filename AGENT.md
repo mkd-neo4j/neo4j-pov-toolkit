@@ -32,14 +32,14 @@ If multiple things are missing, present them **all at once**. Never drip-feed qu
 
 #### Phase 1 - The Architect Persona
 **Focus**: Structure, schema alignment, entity relationships
-**Tools**: discover_datamodels.md (list-datamodels, get-datamodel)
+**Tools**: fetch_neo4j_data_models.md (list-datamodels, get-datamodel)
 **Depth**: Read data for **schema only** (column names, basic types, entity identification)
 **Output**: Cypher-style mapping showing source fields → graph nodes/relationships
 **Critical**: Architects do NOT validate data quality (nulls, distributions, outliers)
 
 #### Phase 2 - The Engineer Persona
 **Focus**: Implementation, defensive code, production quality
-**Tools**: validate_data_quality.md + load_data.md
+**Tools**: analyze_data_quality.md + generate_data_loader_code.md
 **Depth**: Full data quality analysis (nulls, types, invalid values, transformations)
 **Output**: Production-ready data_mapper.py with defensive error handling
 **Critical**: Engineers MUST validate data quality before writing code
@@ -74,17 +74,17 @@ When generating code:
 
 | User Intent | Persona | You MUST Read First | Why |
 |-------------|---------|---------------------|-----|
-| "Which use cases can I implement?" | **Architect** | `src/agents/discover_usecase.md` | Contains mandatory two-step CLI workflow: (1) list-usecases to get URLs, (2) get-usecase to fetch details. You MUST use BOTH commands and never construct URLs manually. |
-| "Map to Neo4j data model" / "Use the transaction/fraud/[any] model" | **Architect** | `src/agents/discover_datamodels.md` | Contains mandatory workflow: (1) list-datamodels to discover available schemas, (2) get-datamodel to fetch official schema. You MUST discover data models from Neo4j catalog, never invent graph schemas. |
-| "How do I connect?" / ".env questions" | **Engineer** | `src/agents/setup.md` | Connection validation, version detection steps |
-| "Validate my data" / Before code generation | **Engineer** | `src/agents/validate_data_quality.md` | MANDATORY data quality checks before writing code. You can't write defensive code without knowing what you're defending against. |
-| "Generate code" / "Load my data" | **Engineer** | `src/agents/load_data.md` | Code generation patterns and API. This file also requires you to read validate_data_quality.md first. |
+| "Which use cases can I implement?" | **Architect** | `src/agents/match_business_to_usecases.md` | Contains mandatory two-step CLI workflow: (1) list-usecases to get URLs, (2) get-usecase to fetch details. You MUST use BOTH commands and never construct URLs manually. |
+| "Map to Neo4j data model" / "Use the transaction/fraud/[any] model" | **Architect** | `src/agents/fetch_neo4j_data_models.md` | Contains mandatory workflow: (1) list-datamodels to discover available schemas, (2) get-datamodel to fetch official schema. You MUST discover data models from Neo4j catalog, never invent graph schemas. |
+| "How do I connect?" / ".env questions" | **Engineer** | `src/agents/validate_neo4j_connection.md` | Connection validation, version detection steps |
+| "Validate my data" / Before code generation | **Engineer** | `src/agents/analyze_data_quality.md` | MANDATORY data quality checks before writing code. You can't write defensive code without knowing what you're defending against. |
+| "Generate code" / "Load my data" | **Engineer** | `src/agents/generate_data_loader_code.md` | Code generation patterns and API. This file also requires you to read analyze_data_quality.md first. |
 
 ### Enforcement
 
 **If user asks "which use cases can I implement with my data?"**
 
-1. 🛑 **STOP** - Have you read `src/agents/discover_usecase.md`?
+1. 🛑 **STOP** - Have you read `src/agents/match_business_to_usecases.md`?
 2. If NO → Read it NOW before responding
 3. Follow the mandatory two-step CLI workflow:
    - Step 1: `python3 cli.py list-usecases` to get official URLs
@@ -104,7 +104,7 @@ When generating code:
 
 **If user asks to "map data to a graph model" or mentions "use the [transaction/fraud/any] model"**
 
-1. 🛑 **STOP** - Have you read `src/agents/discover_datamodels.md`?
+1. 🛑 **STOP** - Have you read `src/agents/fetch_neo4j_data_models.md`?
 2. If NO → Read it NOW before responding
 3. Follow the mandatory workflow:
    - Step 1: `python3 cli.py list-datamodels` to discover available schemas
@@ -128,7 +128,7 @@ When generating code:
 
 ### When to Read Each File
 
-**`src/agents/setup.md`** - Connection Validation & Version Detection
+**`src/agents/validate_neo4j_connection.md`** - Connection Validation & Version Detection
 
 **Read this when**:
 - User asks about connecting to Neo4j
@@ -144,7 +144,7 @@ When generating code:
 
 ---
 
-**`src/agents/discover_usecase.md`** - Use Case Discovery & Matching
+**`src/agents/match_business_to_usecases.md`** - Use Case Discovery & Matching
 
 **Read this when**:
 - User asks "what use cases are available?"
@@ -165,7 +165,7 @@ When generating code:
 
 ---
 
-**`src/agents/validate_data_quality.md`** - Data Quality Validation Before Code Generation
+**`src/agents/analyze_data_quality.md`** - Data Quality Analysis Before Code Generation
 
 **Read this when**:
 - Before generating ANY data loading code
@@ -173,17 +173,17 @@ When generating code:
 - You need to understand data structure, nulls, type mismatches
 
 **What it provides**:
-- **MANDATORY PROFESSIONAL PRACTICE**: Validate data quality BEFORE writing code
-- How to strategically sample large files (4GB+) for validation
+- **MANDATORY PROFESSIONAL PRACTICE**: Analyze data quality BEFORE writing code
+- How to strategically sample large files (4GB+) for analysis
 - Essential checks: nulls, type mismatches, invalid values, distributions
 - How to report findings to users (what's broken, what needs cleaning)
 - Decision criteria: when to proceed vs when to block code generation
-- How validation findings inform defensive code generation
+- How analysis findings inform defensive code generation
 - **Key insight**: "You can't write defensive code if you don't know what you're defending against"
 
 ---
 
-**`src/agents/load_data.md`** - Code Generation for Data Loading
+**`src/agents/generate_data_loader_code.md`** - Code Generation for Data Loading
 
 **Read this when**:
 - User wants to load/import data into Neo4j
@@ -193,7 +193,7 @@ When generating code:
 **What it provides**:
 - **Discovery-based generation**: Read toolkit source code to learn current API (don't assume)
 - Critical pre-generation steps (discover data model, query API, analyze data)
-- **MANDATORY**: Data quality validation must happen first (references validate_data_quality.md)
+- **MANDATORY**: Data quality analysis must happen first (references analyze_data_quality.md)
 - Required code structure (path setup, imports, batching patterns)
 - How to map source data → use case data model (strict adherence required)
 - Cypher query patterns for batched operations

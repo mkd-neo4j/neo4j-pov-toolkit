@@ -1,4 +1,4 @@
-# Connection Setup & Version Detection
+# Validating Neo4j Connection & Detecting Version
 
 > **🛑 STOP**: Have you read [AGENT.md](../../AGENT.md)?
 >
@@ -11,7 +11,7 @@
 
 ---
 
-**Reference guide for validating Neo4j connections and detecting version information.**
+**Reference guide for validating Neo4j connection and detecting version information before code generation.**
 
 ---
 
@@ -34,8 +34,8 @@
 
 **What you DON'T do as Engineer (in this file)**:
 - ❌ Schema design or data mapping - that's Architect work
-- ❌ Data quality validation - that's covered in validate_data_quality.md
-- ❌ Code generation - that's covered in load_data.md
+- ❌ Data quality analysis - that's covered in analyze_data_quality.md
+- ❌ Code generation - that's covered in generate_data_loader_code.md
 
 **Your analysis depth**:
 - **Infrastructure**: Is Neo4j accessible? What version?
@@ -248,5 +248,5 @@ Ready to help load your data. What use case are you implementing?
 
 See also:
 - `../AGENT.md` - Overall guidance
-- `discover_usecase.md` - Next step: selecting use case
-- `load_data.md` - How to use version info when generating code
+- `match_business_to_usecases.md` - Next step: selecting use case
+- `generate_data_loader_code.md` - How to use version info when generating code
