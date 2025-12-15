@@ -310,6 +310,9 @@ def create_constraints_and_indexes(query):
         # Address indexes
         "CREATE INDEX address_postcode IF NOT EXISTS FOR (a:Address) ON (a.postCode)",
         "CREATE INDEX address_posttown IF NOT EXISTS FOR (a:Address) ON (a.postTown)",
+        "CREATE INDEX address_country IF NOT EXISTS FOR (a:Address) ON (a.country)",
+        # PreviousName index for name lookups
+        "CREATE INDEX previous_name_name IF NOT EXISTS FOR (pn:PreviousName) ON (pn.name)",
     ]
 
     for constraint in constraints:
@@ -531,7 +534,8 @@ def create_address_nodes_and_relationships(query, total_rows):
         postTown: row.postTown,
         postCode: row.postCode
     })
-    MERGE (c)-[:HAS_ADDRESS {isCurrent: true}]->(a)
+    MERGE (c)-[r:HAS_ADDRESS]->(a)
+    SET r.isCurrent = true
     """
 
     processed = 0
@@ -616,7 +620,8 @@ def create_company_sic_relationships(query, total_rows):
     UNWIND $batch AS row
     MATCH (c:Company {companyNumber: row.companyNumber})
     MATCH (s:SICCode {code: row.sicCode})
-    MERGE (c)-[:CLASSIFIED_AS {rank: row.rank}]->(s)
+    MERGE (c)-[r:CLASSIFIED_AS]->(s)
+    SET r.rank = row.rank
     """
 
     processed = 0
@@ -679,11 +684,10 @@ def create_previous_name_nodes_and_relationships(query, total_rows):
     })
     SET pn.changeDate = CASE WHEN row.changeDate IS NOT NULL
                         THEN date(row.changeDate) ELSE NULL END
-    MERGE (c)-[:PREVIOUSLY_NAMED {
-        changeDate: CASE WHEN row.changeDate IS NOT NULL
-                    THEN date(row.changeDate) ELSE NULL END,
-        sequence: row.sequence
-    }]->(pn)
+    MERGE (c)-[r:PREVIOUSLY_NAMED]->(pn)
+    SET r.changeDate = CASE WHEN row.changeDate IS NOT NULL
+                       THEN date(row.changeDate) ELSE NULL END,
+        r.sequence = row.sequence
     """
 
     processed = 0
