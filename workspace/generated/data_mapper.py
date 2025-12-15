@@ -10,7 +10,11 @@ Data Model:
     - Address (registered office addresses)
     - Country (ISO country codes)
     - SICCode (Standard Industrial Classification codes)
-    - PreviousName (company name history)
+    - PreviousName (company name history - also has :Company label for unified name queries)
+    
+    Note: PreviousName nodes have BOTH :PreviousName and :Company labels. This enables:
+    - MATCH (c:Company) WHERE c.name = "X" → finds current AND previous names
+    - MATCH (c:Company) WHERE NOT c:PreviousName → only current companies
 
 Performance Considerations:
     - Streams CSV file (never loads entire 2.6GB into memory)
@@ -275,11 +279,10 @@ def create_constraints_and_indexes(query):
     log.info("Creating constraints and indexes...")
 
     constraints = [
-        # Company - unique by company number
-        """
-        CREATE CONSTRAINT company_number IF NOT EXISTS
-        FOR (c:Company) REQUIRE c.companyNumber IS UNIQUE
-        """,
+        # NOTE: Company.companyNumber is NOT a unique constraint because
+        # PreviousName nodes also have :Company label with the same companyNumber.
+        # We use an index instead (see indexes below).
+        
         # Address - composite key
         """
         CREATE CONSTRAINT address_composite IF NOT EXISTS
@@ -304,6 +307,8 @@ def create_constraints_and_indexes(query):
 
     indexes = [
         # Company indexes for common queries
+        # NOTE: companyNumber index (not constraint) because PreviousName also has :Company label
+        "CREATE INDEX company_number IF NOT EXISTS FOR (c:Company) ON (c.companyNumber)",
         "CREATE INDEX company_name IF NOT EXISTS FOR (c:Company) ON (c.name)",
         "CREATE INDEX company_status IF NOT EXISTS FOR (c:Company) ON (c.status)",
         "CREATE INDEX company_category IF NOT EXISTS FOR (c:Company) ON (c.category)",
@@ -674,10 +679,14 @@ def create_previous_name_nodes_and_relationships(query, total_rows):
     """
     log.info("Creating PreviousName nodes and relationships...")
 
+    # PreviousName nodes also get :Company label for unified name queries:
+    # - MATCH (c:Company) WHERE c.name = "X" → finds current AND previous names
+    # - MATCH (c:Company) WHERE c.name = "X" AND NOT c:PreviousName → current only
     cypher = """
     UNWIND $batch AS row
     MATCH (c:Company {companyNumber: row.companyNumber})
-    MERGE (pn:PreviousName {
+    WHERE NOT c:PreviousName
+    MERGE (pn:PreviousName:Company {
         companyNumber: row.companyNumber,
         name: row.previousName,
         sequence: row.sequence

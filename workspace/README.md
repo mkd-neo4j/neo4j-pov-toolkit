@@ -73,20 +73,37 @@ This creates ~5.7M Company nodes, Addresses, SIC codes, and name history.
 (:Company {companyNumber, name, status, category, ...})
     -[:HAS_ADDRESS]-> (:Address {addressLine1, postTown, postCode, ...})
     -[:CLASSIFIED_AS]-> (:SICCode {code, description})
-    -[:PREVIOUSLY_NAMED]-> (:PreviousName {name, changeDate})
+    -[:PREVIOUSLY_NAMED]-> (:PreviousName:Company {name, changeDate})
 
 (:Address)-[:LOCATED_IN]->(:Country {name, code})
 ```
 
+### Key Design Decision: PreviousName has :Company Label
+
+`PreviousName` nodes have **both** `:PreviousName` and `:Company` labels. This enables powerful name queries:
+
+```cypher
+// Find ALL company names (current + previous) matching a pattern
+MATCH (c:Company) WHERE c.name CONTAINS 'VIRGIN' RETURN c.name, c.companyNumber
+
+// Find only current companies (exclude previous names)
+MATCH (c:Company) WHERE c.name CONTAINS 'VIRGIN' AND NOT c:PreviousName RETURN c
+
+// Find companies that share a name with another company's previous name
+MATCH (current:Company)-[:PREVIOUSLY_NAMED]->(prev:PreviousName)
+WHERE current.name = prev.name
+RETURN current, prev
+```
+
 ### Node Counts (approximate)
 
-| Label | Count |
-|-------|-------|
-| Company | ~5.7M |
-| Address | ~4.5M |
-| SICCode | ~800 |
-| Country | ~100 |
-| PreviousName | ~2M |
+| Label | Count | Notes |
+|-------|-------|-------|
+| Company | ~7.8M | Includes ~2M PreviousName nodes |
+| PreviousName | ~2M | Also labeled :Company |
+| Address | ~4.5M | |
+| SICCode | ~800 | |
+| Country | ~100 | |
 
 ---
 
