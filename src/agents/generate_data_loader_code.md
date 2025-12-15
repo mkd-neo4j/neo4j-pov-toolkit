@@ -124,6 +124,24 @@ This guide covers:
 
 After completing data quality validation, you MUST complete these discovery steps:
 
+### 0. Review Neo4j Best Practices
+
+**Read**: [neo4j/cypher_best_practices.md](neo4j/cypher_best_practices.md)
+
+**Essential guidelines**:
+- **Naming conventions**: CamelCase for nodes, UPPER_SNAKE_CASE for relationships, camelCase for properties
+- **Query patterns**: Anchor on indexed properties, use UNWIND $batch for bulk operations
+- **Data modeling**: Avoid supernodes, use specific relationship types, create constraints before loading
+- **Performance**: Batch operations (1000-10000 records), profile queries, avoid gather-and-inspect patterns
+
+**Why This Matters**:
+- Ensures generated code follows Neo4j industry standards
+- Prevents common performance pitfalls
+- Creates maintainable, optimized Cypher queries
+- Aligns with best practices from official Neo4j documentation
+
+**Validation**: Before finalizing generated code, verify against the checklist in cypher_best_practices.md.
+
 ### 1. Discover the Data Model
 
 **Source**: Use case markdown from CLI (`python3 cli.py get-usecase <URL>`)
@@ -475,6 +493,18 @@ if __name__ == '__main__':
 
 ## Cypher Query Patterns
 
+### Neo4j Best Practices
+
+**IMPORTANT**: All Cypher queries must follow Neo4j best practices. See [neo4j/cypher_best_practices.md](neo4j/cypher_best_practices.md) for complete guidelines.
+
+**Quick reference**:
+- **Node labels**: `CamelCase` (e.g., `Customer`, `EmailAddress`)
+- **Relationship types**: `UPPER_SNAKE_CASE` (e.g., `HAS_EMAIL`, `PLACED_ORDER`)
+- **Properties**: `camelCase` (e.g., `firstName`, `customerId`)
+- **Constraints**: Create before loading data
+- **Indexing**: Anchor queries on indexed properties
+- **Batching**: 1000-10000 records per batch for optimal performance
+
 ### Discovered from query.py
 
 **For batched operations** (bulk loading):
@@ -779,14 +809,17 @@ def verify_load(query):
 ## Key Takeaways
 
 ### Always Do:
-1. **Read toolkit source code** before generating
-2. **Follow use case data model** exactly (labels, types, required properties)
-3. **Include path setup** at top of generated script
-4. **Use discovered API** (don't assume function names)
-5. **Adapt data reading** to actual format (CSV, JSON, etc.)
-6. **Log progress** at each step, especially during bulk data loading
-7. **Implement progress logging** for large datasets (manual batching loop with periodic updates)
-8. **Clean up resources** in finally block
+1. **Review Neo4j best practices** (neo4j/cypher_best_practices.md) before generating
+2. **Read toolkit source code** before generating
+3. **Follow use case data model** exactly (labels, types, required properties)
+4. **Apply naming conventions**: CamelCase nodes, UPPER_SNAKE_CASE relationships, camelCase properties
+5. **Include path setup** at top of generated script
+6. **Use discovered API** (don't assume function names)
+7. **Adapt data reading** to actual format (CSV, JSON, etc.)
+8. **Log progress** at each step, especially during bulk data loading
+9. **Implement progress logging** for large datasets (manual batching loop with periodic updates)
+10. **Clean up resources** in finally block
+11. **Validate generated code** against best practices checklist
 
 ### Never Do:
 1. ❌ Hard-code toolkit API assumptions
@@ -797,6 +830,7 @@ def verify_load(query):
 6. ❌ Use `run_batched()` without visible progress for large datasets
 
 ### Discovery Sources:
+- `neo4j/cypher_best_practices.md` → Neo4j standards and optimization (mandatory)
 - Use case markdown → Data model (authoritative)
 - `src/core/neo4j/` → Query API (latest)
 - `workspace/generated/data_mapper.py` → Working patterns
@@ -806,7 +840,9 @@ def verify_load(query):
 
 ## See Also
 
+- `neo4j/cypher_best_practices.md` - Neo4j standards and optimization (READ FIRST)
 - `../AGENT.md` - Overall toolkit guidance
 - `match_business_to_usecases.md` - How to fetch official use cases
+- `analyze_data_quality.md` - Data validation before code generation
 - `validate_neo4j_connection.md` - Connection validation (if needed for Cypher version)
 - Working example: `workspace/generated/data_mapper.py`
