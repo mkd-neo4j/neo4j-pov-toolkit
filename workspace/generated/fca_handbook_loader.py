@@ -358,6 +358,116 @@ class FCAHandbookAPILoader:
 
         return hierarchy
 
+    def _extract_cross_references(self, html_content: str, source_provision_id: int) -> List[Dict]:
+        """
+        Extract cross-references from HTML content
+
+        Parses the contentType HTML field to find:
+        - Cross-references to other provisions (in <span class="xref">)
+        - Direct handbook links
+
+        Args:
+            html_content: HTML content from provision's contentType field
+            source_provision_id: ID of the source provision
+
+        Returns:
+            List of cross-reference dictionaries with source, target info, and link text
+        """
+        from bs4 import BeautifulSoup
+        import re
+
+        if not html_content:
+            return []
+
+        cross_refs = []
+
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            # Find all xref spans (primary cross-references)
+            xrefs = soup.find_all('span', class_='xref')
+
+            for xref in xrefs:
+                link = xref.find('a')
+                if not link:
+                    continue
+
+                href = link.get('href', '')
+                link_text = link.get_text().strip()
+
+                if not href or not link_text:
+                    continue
+
+                # Parse target from href
+                # Examples:
+                #   /handbook/prin2 -> chapter reference
+                #   /handbook/gen2/gen2s2 -> section reference
+                #   /handbook/gen2/gen2s2#p40456 -> provision reference
+
+                # Extract target identifiers
+                target_info = self._parse_reference_target(href, link_text)
+
+                if target_info:
+                    cross_refs.append({
+                        'sourceProvisionId': source_provision_id,
+                        'linkText': link_text,
+                        'href': href,
+                        **target_info
+                    })
+
+        except Exception as e:
+            log.warning(f"Error parsing cross-references for provision {source_provision_id}: {e}")
+
+        return cross_refs
+
+    def _parse_reference_target(self, href: str, link_text: str) -> Optional[Dict]:
+        """
+        Parse reference target from href to determine what it points to
+
+        Args:
+            href: Link href (e.g., "/handbook/prin2", "/handbook/gen2/gen2s2#p40456")
+            link_text: Display text of the link
+
+        Returns:
+            Dictionary with targetType and targetId, or None if invalid
+        """
+        import re
+
+        # Remove leading/trailing slashes and whitespace
+        href = href.strip().strip('/')
+
+        # Pattern: handbook/CHAPTER or handbook/CHAPTER/SECTION or handbook/CHAPTER#anchor
+        match = re.match(r'handbook/([a-z0-9]+)(?:/([a-z0-9s]+))?(?:#(.+))?', href.lower())
+
+        if not match:
+            return None
+
+        chapter_id = match.group(1)
+        section_id = match.group(2)
+        anchor = match.group(3)
+
+        if anchor:
+            # Provision reference (has anchor like #p40456)
+            return {
+                'targetType': 'provision',
+                'targetChapterId': chapter_id,
+                'targetSectionId': section_id,
+                'targetAnchor': anchor
+            }
+        elif section_id:
+            # Section reference
+            return {
+                'targetType': 'section',
+                'targetChapterId': chapter_id,
+                'targetSectionId': section_id
+            }
+        else:
+            # Chapter reference
+            return {
+                'targetType': 'chapter',
+                'targetChapterId': chapter_id
+            }
+
     def _load_provisions(self, chapter_id: str, provisions: List[Dict]):
         """
         Load provisions and build hierarchical structure in Neo4j
@@ -378,6 +488,7 @@ class FCAHandbookAPILoader:
         glossary_data = []
         glossary_relationships = []
         hierarchy_relationships = []
+        cross_references = []
 
         for prov in provisions:
             provision_name = prov.get('provisionName', '')
@@ -465,6 +576,12 @@ class FCAHandbookAPILoader:
                         'provisionId': provision_id,
                         'termId': term_id
                     })
+
+            # Extract cross-references from HTML content
+            html_content = prov.get('contentType', '')
+            if html_content:
+                provision_cross_refs = self._extract_cross_references(html_content, provision_id)
+                cross_references.extend(provision_cross_refs)
 
         # Batch load sections
         section_list = list(all_sections.values())
@@ -563,6 +680,75 @@ class FCAHandbookAPILoader:
             MERGE (p)-[:DEFINES]->(t)
             """
             self.query.run_batched(glossary_rel_cypher, glossary_relationships, batch_size=self.batch_size)
+
+        # Batch load cross-references
+        if cross_references:
+            log.info(f"Loading {len(cross_references)} cross-references...")
+
+            # Group by target type for efficient loading
+            chapter_refs = [r for r in cross_references if r['targetType'] == 'chapter']
+            section_refs = [r for r in cross_references if r['targetType'] == 'section']
+            provision_refs = [r for r in cross_references if r['targetType'] == 'provision']
+
+            # Chapter references
+            if chapter_refs:
+                log.info(f"  - {len(chapter_refs)} chapter references")
+                chapter_ref_cypher = """
+                UNWIND $batch AS row
+                MATCH (source:Provision {provisionId: row.sourceProvisionId})
+                MERGE (target:Chapter {chapterId: row.targetChapterId})
+                MERGE (source)-[:REFERENCES {
+                    linkText: row.linkText,
+                    targetType: row.targetType,
+                    href: row.href
+                }]->(target)
+                """
+                self.query.run_batched(chapter_ref_cypher, chapter_refs, batch_size=self.batch_size)
+
+            # Section references
+            if section_refs:
+                log.info(f"  - {len(section_refs)} section references")
+                section_ref_cypher = """
+                UNWIND $batch AS row
+                MATCH (source:Provision {provisionId: row.sourceProvisionId})
+                MERGE (target:Section {sectionId: row.targetSectionId})
+                MERGE (source)-[:REFERENCES {
+                    linkText: row.linkText,
+                    targetType: row.targetType,
+                    href: row.href
+                }]->(target)
+                """
+                self.query.run_batched(section_ref_cypher, section_refs, batch_size=self.batch_size)
+
+            # Provision references (by anchor)
+            if provision_refs:
+                log.info(f"  - {len(provision_refs)} provision references (by anchor)")
+
+                # Extract provisionId from anchors like #p22 or #p40456
+                for ref in provision_refs:
+                    anchor = ref.get('targetAnchor', '')
+                    if anchor and anchor.startswith('p'):
+                        try:
+                            ref['targetProvisionId'] = int(anchor[1:])  # Remove 'p' prefix
+                        except ValueError:
+                            log.warning(f"Could not parse provision ID from anchor: {anchor}")
+
+                # Filter to only those with valid provisionId
+                valid_provision_refs = [r for r in provision_refs if 'targetProvisionId' in r]
+
+                if valid_provision_refs:
+                    provision_ref_cypher = """
+                    UNWIND $batch AS row
+                    MATCH (source:Provision {provisionId: row.sourceProvisionId})
+                    MERGE (target:Provision {provisionId: row.targetProvisionId})
+                    MERGE (source)-[:REFERENCES {
+                        linkText: row.linkText,
+                        targetType: row.targetType,
+                        href: row.href
+                    }]->(target)
+                    """
+                    self.query.run_batched(provision_ref_cypher, valid_provision_refs, batch_size=self.batch_size)
+                    log.info(f"    Created {len(valid_provision_refs)} provision-to-provision references")
 
     def run(self, handbook: Optional[str] = None, chapters: Optional[List[str]] = None):
         """
