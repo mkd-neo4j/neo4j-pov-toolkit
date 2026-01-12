@@ -7,7 +7,7 @@ Purpose:
 
 Architecture:
     This script operates in three phases:
-    1. Fetch: Retrieves JSON data from FCA REST API
+    1. Fetch: Retrieves JSON data from FCA REST API (with retry logic)
     2. Transform: Extracts provisions, sections, and relationships
     3. Load: Batches data and loads into Neo4j using MERGE operations
 
@@ -18,21 +18,36 @@ Graph Model:
         - lastModifiedDate: Last modification date
         - nextChapterId: Link to next chapter
         - previousChapterId: Link to previous chapter
+        - isChapterDeleted: Deletion status
+        - chapterDeletionMessage: Message if deleted
+        - isChapterFutureVersion: Future version flag
+        - breadcrumbs: JSON array of navigation breadcrumbs
 
     (:Section) nodes with properties:
         - sectionId: Unique identifier (e.g., "prin1s1")
         - sectionName: Section name (e.g., "PRIN 1.1 Application")
-        - sectionHeader: Optional header content
-        - sectionFooter: Optional footer content
+        - sectionNumber: Section number (e.g., "3.1")
+        - level: Hierarchy level
+        - chapterId: Parent chapter ID (denormalized for performance/debugging)
+        - sectionHeader: HTML header content
+        - sectionFooter: HTML footer content
 
     (:Provision) nodes with properties:
         - provisionId: Unique identifier (e.g., 99575)
         - entityId: Entity identifier (e.g., "prin2-prin2s1-p16")
         - provisionName: Provision name (e.g., "PRIN 2.1.1")
         - provisionType: Type (e.g., "Rules", "Guidance")
+        - provisionTypeId: Type identifier
+        - provisionTagId: Tag identifier
         - contentText: Plain text content
         - contentType: HTML content
         - timeline: Last modified date
+        - isDeleted: Deletion status
+        - sectionId: Parent section ID from API (denormalized for API reconciliation)
+        - sectionName: Section name from API (denormalized for display/debugging)
+        - subSectionName: Subsection name
+        - parentSectionId: Computed parent section (denormalized for performance)
+        - metadataCountsJson: JSON string of metadata counts
 
     (:GlossaryTerm) nodes with properties:
         - termId: Unique identifier (e.g., "G430")
@@ -40,9 +55,11 @@ Graph Model:
         - link: Glossary link
 
     Relationships:
-        - (:Chapter)-[:HAS_SECTION]->(:Section)
-        - (:Section)-[:HAS_PROVISION]->(:Provision)
+        - (:Chapter)-[:CONTAINS]->(:Section)
+        - (:Section)-[:CONTAINS]->(:Section) [nested sections]
+        - (:Section)-[:CONTAINS]->(:Provision)
         - (:Provision)-[:DEFINES]->(:GlossaryTerm)
+        - (:Provision)-[:REFERENCES]->(:Chapter|:Section|:Provision)
         - (:Chapter)-[:NEXT]->(:Chapter)
         - (:Chapter)-[:PREVIOUS]->(:Chapter)
 
@@ -65,8 +82,12 @@ import sys
 import os
 import argparse
 import hashlib
+import json
+import time
 from typing import Dict, List, Optional
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Add project root to path so we can import toolkit modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -78,6 +99,11 @@ from src.core.logger import log
 API_BASE_URL = "https://api-handbook.fca.org.uk/Handbook"
 CHAPTER_ENDPOINT = "/GetAllHandBookProvisionsSortedOrderByChapter"
 ALL_HANDBOOKS_ENDPOINT = "/GetAllHandbook"
+
+# Retry configuration
+MAX_RETRIES = 3
+BACKOFF_FACTOR = 0.5  # 0.5s, 1s, 2s between retries
+RETRY_STATUS_CODES = [429, 500, 502, 503, 504]
 
 
 class FCAHandbookAPILoader:
@@ -99,15 +125,42 @@ class FCAHandbookAPILoader:
         self.batch_size = batch_size
         self.validate_only = validate_only
 
+        # Initialize requests session with retry logic
+        self.session = self._create_retry_session()
+
         # Initialize Neo4j connection unless in validate-only mode
         if not validate_only:
             self.query = Neo4jQuery()
             self._setup_constraints()
 
-    def _setup_constraints(self):
-        """Create Neo4j constraints for data integrity"""
-        log.info("Setting up Neo4j constraints...")
+    def _create_retry_session(self) -> requests.Session:
+        """
+        Create a requests session with automatic retry logic
 
+        Returns:
+            Configured requests.Session with retry adapter
+        """
+        session = requests.Session()
+
+        retry_strategy = Retry(
+            total=MAX_RETRIES,
+            backoff_factor=BACKOFF_FACTOR,
+            status_forcelist=RETRY_STATUS_CODES,
+            allowed_methods=["GET", "POST"],
+            raise_on_status=False
+        )
+
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
+        return session
+
+    def _setup_constraints(self):
+        """Create Neo4j constraints and indexes for data integrity and query performance"""
+        log.info("Setting up Neo4j constraints and indexes...")
+
+        # Unique constraints (also create indexes automatically)
         constraints = [
             "CREATE CONSTRAINT chapter_id_unique IF NOT EXISTS FOR (c:Chapter) REQUIRE c.chapterId IS UNIQUE",
             "CREATE CONSTRAINT section_id_unique IF NOT EXISTS FOR (s:Section) REQUIRE s.sectionId IS UNIQUE",
@@ -121,10 +174,25 @@ class FCAHandbookAPILoader:
             except Exception as e:
                 log.warning(f"Constraint may already exist: {e}")
 
-        log.info("Constraints configured")
+        # Additional indexes for frequently queried properties
+        indexes = [
+            "CREATE INDEX chapter_name_idx IF NOT EXISTS FOR (c:Chapter) ON (c.chapterName)",
+            "CREATE INDEX provision_name_idx IF NOT EXISTS FOR (p:Provision) ON (p.provisionName)",
+            "CREATE INDEX provision_type_idx IF NOT EXISTS FOR (p:Provision) ON (p.provisionType)",
+            "CREATE INDEX provision_deleted_idx IF NOT EXISTS FOR (p:Provision) ON (p.isDeleted)",
+            "CREATE INDEX section_number_idx IF NOT EXISTS FOR (s:Section) ON (s.sectionNumber)",
+            "CREATE INDEX term_name_idx IF NOT EXISTS FOR (t:GlossaryTerm) ON (t.name)"
+        ]
 
-    @staticmethod
-    def get_all_handbooks() -> Dict[str, str]:
+        for index in indexes:
+            try:
+                self.query.run(index)
+            except Exception as e:
+                log.warning(f"Index may already exist: {e}")
+
+        log.info("Constraints and indexes configured")
+
+    def get_all_handbooks(self) -> Dict[str, str]:
         """
         Fetch all available handbooks from the FCA API
 
@@ -135,7 +203,7 @@ class FCAHandbookAPILoader:
             url = f"{API_BASE_URL}{ALL_HANDBOOKS_ENDPOINT}"
             params = {'Date': '31-07-2023'}  # Use a stable date for consistency
 
-            response = requests.get(url, params=params, timeout=30)
+            response = self.session.get(url, params=params, timeout=30)
             response.raise_for_status()
 
             data = response.json()
@@ -164,7 +232,7 @@ class FCAHandbookAPILoader:
 
     def fetch_chapter_data(self, chapter_id: str) -> Optional[Dict]:
         """
-        Fetch chapter data from FCA API
+        Fetch chapter data from FCA API with retry logic
 
         Args:
             chapter_id: Chapter identifier (e.g., "prin1", "prin2")
@@ -176,7 +244,7 @@ class FCAHandbookAPILoader:
             url = f"{API_BASE_URL}{CHAPTER_ENDPOINT}/{chapter_id}?IsDeleted=false"
             log.debug(f"Fetching: {url}")
 
-            response = requests.get(url, timeout=30)
+            response = self.session.get(url, timeout=30)
             response.raise_for_status()
 
             data = response.json()
@@ -280,14 +348,23 @@ class FCAHandbookAPILoader:
             log.info(f"[VALIDATE MODE] Would load chapter {chapter_id} with {len(data.get('provisions', []))} provisions")
             return
 
-        # Load chapter node
+        # Load chapter node with all API fields
         chapter_cypher = """
         MERGE (c:Chapter {chapterId: $chapterId})
         SET c.chapterName = $chapterName,
             c.lastModifiedDate = $lastModifiedDate,
             c.nextChapterId = $nextChapterId,
             c.previousChapterId = $previousChapterId,
-            c.isDeleted = $isDeleted
+            c.isChapterDeleted = $isChapterDeleted,
+            c.isSectionDeleted = $isSectionDeleted,
+            c.isHeaderDeleted = $isHeaderDeleted,
+            c.chapterDeletionMessage = $chapterDeletionMessage,
+            c.sectionDeletionMessage = $sectionDeletionMessage,
+            c.isChapterFutureVersion = $isChapterFutureVersion,
+            c.isSectionFutureVersion = $isSectionFutureVersion,
+            c.chapterFutureVersionMessage = $chapterFutureVersionMessage,
+            c.futureVersionDate = $futureVersionDate,
+            c.breadcrumbsJson = $breadcrumbsJson
         """
 
         self.query.run(chapter_cypher, {
@@ -296,7 +373,16 @@ class FCAHandbookAPILoader:
             'lastModifiedDate': data.get('lastModifiedDate'),
             'nextChapterId': data.get('nextChapterId'),
             'previousChapterId': data.get('previousChapterId'),
-            'isDeleted': data.get('isChapterDeleted', False)
+            'isChapterDeleted': data.get('isChapterDeleted', False),
+            'isSectionDeleted': data.get('isSectionDeleted', False),
+            'isHeaderDeleted': data.get('isHeaderDeleted', False),
+            'chapterDeletionMessage': data.get('chapterDeletionMessage', ''),
+            'sectionDeletionMessage': data.get('sectionDeletionMessage', ''),
+            'isChapterFutureVersion': data.get('isChapterFutureVersion', False),
+            'isSectionFutureVersion': data.get('isSectionFutureVersion', False),
+            'chapterFutureVersionMessage': data.get('chapterFutureVersionMessage'),
+            'futureVersionDate': data.get('futureVersionDate'),
+            'breadcrumbsJson': json.dumps(data.get('breadCrumbs', []))
         })
 
         # Create chapter navigation relationships
@@ -553,11 +639,18 @@ class FCAHandbookAPILoader:
                     'provisionName': provision_name,
                     'provisionNumber': hierarchy[-1] if hierarchy else '',
                     'provisionType': prov.get('provisionType'),
+                    'provisionTypeId': prov.get('provisionTypeId'),
+                    'provisionTagId': prov.get('provisionTagId'),
                     'contentText': prov.get('contentText', ''),
                     'contentType': prov.get('contentType', ''),
                     'timeline': prov.get('timeline'),
+                    'isDeleted': prov.get('isDeleted', False),
+                    'sectionId': prov.get('sectionId'),
                     'sectionName': prov.get('sectionName'),
+                    'sectionHeader': prov.get('sectionHeader', ''),
+                    'sectionFooter': prov.get('sectionFooter', ''),
                     'subSectionName': prov.get('subSectionName', ''),
+                    'metadataCountsJson': json.dumps(prov.get('metadataCounts', [])),
                     'parentSectionId': parent_section_id
                 })
 
@@ -611,11 +704,18 @@ class FCAHandbookAPILoader:
                 p.provisionName = row.provisionName,
                 p.provisionNumber = row.provisionNumber,
                 p.provisionType = row.provisionType,
+                p.provisionTypeId = row.provisionTypeId,
+                p.provisionTagId = row.provisionTagId,
                 p.contentText = row.contentText,
                 p.contentType = row.contentType,
                 p.timeline = row.timeline,
+                p.isDeleted = row.isDeleted,
+                p.sectionId = row.sectionId,
                 p.sectionName = row.sectionName,
+                p.sectionHeader = row.sectionHeader,
+                p.sectionFooter = row.sectionFooter,
                 p.subSectionName = row.subSectionName,
+                p.metadataCountsJson = row.metadataCountsJson,
                 p.parentSectionId = row.parentSectionId
             """
             self.query.run_batched(provision_cypher, provision_data, batch_size=self.batch_size)
@@ -786,8 +886,9 @@ class FCAHandbookAPILoader:
 def main():
     """Main entry point with argument parsing"""
 
-    # Fetch available handbooks from API
-    available_handbooks = FCAHandbookAPILoader.get_all_handbooks()
+    # Create temp loader just to fetch handbooks list
+    temp_loader = FCAHandbookAPILoader(validate_only=True)
+    available_handbooks = temp_loader.get_all_handbooks()
 
     parser = argparse.ArgumentParser(
         description='Load FCA Handbook content from REST API into Neo4j',
