@@ -1,266 +1,112 @@
 """
-FCA Handbook Data Loader (API-Based)
+FCA Handbook Data Loader (API-Based) - Refactored Enterprise Edition
 
 Purpose:
     Fetches UK Financial Conduct Authority (FCA) Handbook content via the FCA REST API
     and loads it into Neo4j as a hierarchical graph structure.
 
 Architecture:
-    This script operates in three phases:
-    1. Fetch: Retrieves JSON data from FCA REST API (with retry logic)
-    2. Transform: Extracts provisions, sections, and relationships
-    3. Load: Batches data and loads into Neo4j using MERGE operations
+    This script uses a clean separation of concerns:
+    1. FCAAPIClient: Handles all HTTP communication with retry logic
+    2. FCADataTransformer: Transforms raw API data into domain models
+    3. FCANeo4jRepository: Manages all Neo4j operations with optimized batch processing
 
-Graph Model:
+Graph Model (with Temporal Versioning):
+    (:Handbook) nodes with properties:
+        - handbookCode: Unique handbook identifier (e.g., "prin", "mifid", "sysc")
+        - handbookName: Full handbook name
+
     (:Chapter) nodes with properties:
         - chapterId: Unique identifier (e.g., "prin1")
-        - chapterName: Chapter name (e.g., "PRIN 1 Application and Purpose")
-        - lastModifiedDate: Last modification date
-        - nextChapterId: Link to next chapter
-        - previousChapterId: Link to previous chapter
-        - isChapterDeleted: Deletion status
-        - chapterDeletionMessage: Message if deleted
-        - isChapterFutureVersion: Future version flag
-        - breadcrumbs: JSON array of navigation breadcrumbs
+        - versionDate: Date this version became active (ISO format: YYYY-MM-DD)
+        - validFrom: Date this version is valid from (Neo4j Date type)
+        - validTo: Date this version is valid until (Neo4j Date type, null if current)
+        - isCurrent: Boolean flag indicating if this is the current version
+        - chapterName, nextChapterId, breadcrumbsJson, etc.
 
     (:Section) nodes with properties:
-        - sectionId: Unique identifier (e.g., "prin1s1")
-        - sectionName: Section name (e.g., "PRIN 1.1 Application")
-        - sectionNumber: Section number (e.g., "3.1")
-        - level: Hierarchy level
-        - chapterId: Parent chapter ID (denormalized for performance/debugging)
-        - sectionHeader: HTML header content
-        - sectionFooter: HTML footer content
+        - sectionId, versionDate, validFrom, validTo, isCurrent
+        - sectionName, sectionNumber, level, chapterId
 
     (:Provision) nodes with properties:
-        - provisionId: Unique identifier (e.g., 99575)
-        - entityId: Entity identifier (e.g., "prin2-prin2s1-p16")
-        - provisionName: Provision name (e.g., "PRIN 2.1.1")
-        - provisionType: Type (e.g., "Rules", "Guidance")
-        - provisionTypeId: Type identifier
-        - provisionTagId: Tag identifier
-        - contentText: Plain text content
-        - contentType: HTML content
-        - timeline: Last modified date
-        - isDeleted: Deletion status
-        - sectionId: Parent section ID from API (denormalized for API reconciliation)
-        - sectionName: Section name from API (denormalized for display/debugging)
-        - subSectionName: Subsection name
-        - parentSectionId: Computed parent section (denormalized for performance)
-        - metadataCountsJson: JSON string of metadata counts
+        - provisionId, versionDate, validFrom, validTo, isCurrent
+        - provisionName, provisionType, contentText, contentType, etc.
 
     (:GlossaryTerm) nodes with properties:
-        - termId: Unique identifier (e.g., "G430")
-        - name: Term name (e.g., "firm")
-        - link: Glossary link
+        - termId, name, link
 
     Relationships:
-        - (:Chapter)-[:CONTAINS]->(:Section)
-        - (:Section)-[:CONTAINS]->(:Section) [nested sections]
-        - (:Section)-[:CONTAINS]->(:Provision)
+        - (:Handbook)-[:CONTAINS]->(:Chapter) [handbook contains chapters]
+        - (:Chapter)-[:CONTAINS]->(:Section) [temporal validity]
+        - (:Section)-[:CONTAINS]->(:Section) [nested sections, temporal]
+        - (:Section)-[:CONTAINS]->(:Provision) [temporal validity]
         - (:Provision)-[:DEFINES]->(:GlossaryTerm)
-        - (:Provision)-[:REFERENCES]->(:Chapter|:Section|:Provision)
-        - (:Chapter)-[:NEXT]->(:Chapter)
-        - (:Chapter)-[:PREVIOUS]->(:Chapter)
+        - (:Provision)-[:REFERENCES]->(:Chapter|:Section|:Provision) [temporal]
+        - (:Chapter)-[:NEXT]->(:Chapter) [one-way chapter navigation]
+        - (*)-[:NEXT_VERSION]->(*) [one-way temporal versioning]
 
 Usage:
     # Load all chapters for a handbook (e.g., PRIN)
-    python workspace/generated/fca_handbook_loader.py --handbook prin
+    python workspace/generated/fca_handbook_loader_v2.py --handbook prin
 
     # Load specific chapters
-    python workspace/generated/fca_handbook_loader.py --chapters prin1 prin2 prin3
+    python workspace/generated/fca_handbook_loader_v2.py --chapters prin1 prin2 prin3
 
     # Validate without loading
-    python workspace/generated/fca_handbook_loader.py --handbook prin --validate-only
+    python workspace/generated/fca_handbook_loader_v2.py --handbook prin --validate-only
+
+    # Load historical version
+    python workspace/generated/fca_handbook_loader_v2.py --handbook prin --date 01-01-2020
 
 Requirements:
     - Neo4j connection configured in .env file
-    - Dependencies: requests, neo4j
+    - Dependencies: requests, neo4j, beautifulsoup4
 """
 
 import sys
 import os
 import argparse
-import hashlib
-import json
-import time
-from typing import Dict, List, Optional
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from typing import List, Optional
 
-# Add project root to path so we can import toolkit modules
+# Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from src.core.neo4j.query import Neo4jQuery
 from src.core.logger import log
-
-# Constants
-API_BASE_URL = "https://api-handbook.fca.org.uk/Handbook"
-CHAPTER_ENDPOINT = "/GetAllHandBookProvisionsSortedOrderByChapter"
-ALL_HANDBOOKS_ENDPOINT = "/GetAllHandbook"
-
-# Retry configuration
-MAX_RETRIES = 3
-BACKOFF_FACTOR = 0.5  # 0.5s, 1s, 2s between retries
-RETRY_STATUS_CODES = [429, 500, 502, 503, 504]
+from workspace.generated.fca_models import LoaderConfig, EntityType
+from workspace.generated.fca_api_client import FCAAPIClient
+from workspace.generated.fca_transformer import FCADataTransformer
+from workspace.generated.fca_neo4j_repository import FCANeo4jRepository
+from workspace.generated.fca_exceptions import (
+    FCALoaderError, TransientAPIError, PermanentAPIError,
+    DataValidationError, Neo4jOperationError
+)
 
 
-class FCAHandbookAPILoader:
+class FCAHandbookLoader:
     """
-    Fetches and loads FCA Handbook content from REST API into Neo4j
+    Orchestrates the loading of FCA Handbook content into Neo4j
 
-    This class handles the complete workflow of fetching JSON from the FCA API,
-    transforming it, and loading into Neo4j.
+    This is the main coordinator class that uses:
+    - FCAAPIClient for API communication
+    - FCADataTransformer for data transformation
+    - FCANeo4jRepository for database operations
+
+    All business logic is delegated to specialized components.
     """
 
-    def __init__(self, batch_size: int = 1000, validate_only: bool = False):
+    def __init__(self, config: LoaderConfig):
         """
-        Initialize the loader
+        Initialize the loader with configuration
 
         Args:
-            batch_size: Number of items to batch before loading to Neo4j
-            validate_only: If True, validate data but don't load to Neo4j
+            config: Loader configuration object
         """
-        self.batch_size = batch_size
-        self.validate_only = validate_only
+        self.config = config
+        self.api_client = FCAAPIClient(config)
+        self.transformer = FCADataTransformer()
 
-        # Initialize requests session with retry logic
-        self.session = self._create_retry_session()
-
-        # Initialize Neo4j connection unless in validate-only mode
-        if not validate_only:
-            self.query = Neo4jQuery()
-            self._setup_constraints()
-
-    def _create_retry_session(self) -> requests.Session:
-        """
-        Create a requests session with automatic retry logic
-
-        Returns:
-            Configured requests.Session with retry adapter
-        """
-        session = requests.Session()
-
-        retry_strategy = Retry(
-            total=MAX_RETRIES,
-            backoff_factor=BACKOFF_FACTOR,
-            status_forcelist=RETRY_STATUS_CODES,
-            allowed_methods=["GET", "POST"],
-            raise_on_status=False
-        )
-
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-
-        return session
-
-    def _setup_constraints(self):
-        """Create Neo4j constraints and indexes for data integrity and query performance"""
-        log.info("Setting up Neo4j constraints and indexes...")
-
-        # Unique constraints (also create indexes automatically)
-        constraints = [
-            "CREATE CONSTRAINT chapter_id_unique IF NOT EXISTS FOR (c:Chapter) REQUIRE c.chapterId IS UNIQUE",
-            "CREATE CONSTRAINT section_id_unique IF NOT EXISTS FOR (s:Section) REQUIRE s.sectionId IS UNIQUE",
-            "CREATE CONSTRAINT provision_id_unique IF NOT EXISTS FOR (p:Provision) REQUIRE p.provisionId IS UNIQUE",
-            "CREATE CONSTRAINT term_id_unique IF NOT EXISTS FOR (t:GlossaryTerm) REQUIRE t.termId IS UNIQUE"
-        ]
-
-        for constraint in constraints:
-            try:
-                self.query.run(constraint)
-            except Exception as e:
-                log.warning(f"Constraint may already exist: {e}")
-
-        # Additional indexes for frequently queried properties
-        indexes = [
-            "CREATE INDEX chapter_name_idx IF NOT EXISTS FOR (c:Chapter) ON (c.chapterName)",
-            "CREATE INDEX provision_name_idx IF NOT EXISTS FOR (p:Provision) ON (p.provisionName)",
-            "CREATE INDEX provision_type_idx IF NOT EXISTS FOR (p:Provision) ON (p.provisionType)",
-            "CREATE INDEX provision_deleted_idx IF NOT EXISTS FOR (p:Provision) ON (p.isDeleted)",
-            "CREATE INDEX section_number_idx IF NOT EXISTS FOR (s:Section) ON (s.sectionNumber)",
-            "CREATE INDEX term_name_idx IF NOT EXISTS FOR (t:GlossaryTerm) ON (t.name)"
-        ]
-
-        for index in indexes:
-            try:
-                self.query.run(index)
-            except Exception as e:
-                log.warning(f"Index may already exist: {e}")
-
-        log.info("Constraints and indexes configured")
-
-    def get_all_handbooks(self) -> Dict[str, str]:
-        """
-        Fetch all available handbooks from the FCA API
-
-        Returns:
-            Dictionary mapping handbook codes (lowercase) to full names
-        """
-        try:
-            url = f"{API_BASE_URL}{ALL_HANDBOOKS_ENDPOINT}"
-            params = {'Date': '31-07-2023'}  # Use a stable date for consistency
-
-            response = self.session.get(url, params=params, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-
-            if not data.get('Success'):
-                log.error(f"Failed to fetch handbooks: {data.get('Error')}")
-                return {}
-
-            result = data.get('Result', {})
-            headers = result.get('headers', [])
-
-            handbooks = {}
-            for header in headers:
-                for part in header.get('parts', []):
-                    code = part.get('contains')
-                    name = part.get('name')
-                    if code:
-                        handbooks[code.lower()] = name
-
-            log.info(f"Discovered {len(handbooks)} available handbooks from API")
-            return handbooks
-
-        except Exception as e:
-            log.error(f"Failed to fetch handbooks list: {e}")
-            return {}
-
-    def fetch_chapter_data(self, chapter_id: str) -> Optional[Dict]:
-        """
-        Fetch chapter data from FCA API with retry logic
-
-        Args:
-            chapter_id: Chapter identifier (e.g., "prin1", "prin2")
-
-        Returns:
-            Dictionary with chapter data, or None on error
-        """
-        try:
-            url = f"{API_BASE_URL}{CHAPTER_ENDPOINT}/{chapter_id}?IsDeleted=false"
-            log.debug(f"Fetching: {url}")
-
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-
-            if not data.get('Success'):
-                log.error(f"API returned error for {chapter_id}: {data.get('Error')}")
-                return None
-
-            return data.get('Result')
-
-        except requests.RequestException as e:
-            log.error(f"Failed to fetch {chapter_id}: {e}")
-            return None
-        except Exception as e:
-            log.error(f"Unexpected error fetching {chapter_id}: {e}")
-            return None
+        # Only initialize repository if not in validate-only mode
+        self.repository = None if config.validate_only else FCANeo4jRepository(config)
 
     def discover_chapters(self, handbook_prefix: str) -> List[str]:
         """
@@ -288,10 +134,16 @@ class FCAHandbookAPILoader:
                 break
 
             # Try to fetch chapter
-            data = self.fetch_chapter_data(current_chapter_id)
+            try:
+                data = self.api_client.fetch_chapter_data(current_chapter_id)
+            except PermanentAPIError as e:
+                log.warning(f"Could not fetch {current_chapter_id}: {e}")
+                break
+            except TransientAPIError as e:
+                log.error(f"Transient error fetching {current_chapter_id}: {e}")
+                break
 
             if data is None:
-                # No more chapters found
                 break
 
             # Check if chapter has actual content (provisions)
@@ -329,526 +181,193 @@ class FCAHandbookAPILoader:
         log.info(f"Discovered {len(chapters)} chapters with content")
         return chapters
 
-    def load_chapter(self, chapter_id: str):
+    def load_chapter_versions(self, chapter_id: str, handbook_code: Optional[str] = None):
         """
-        Load a single chapter and all its provisions into Neo4j
+        Load all historical versions of a chapter using Timeline API
 
         Args:
             chapter_id: Chapter identifier (e.g., "prin1")
+            handbook_code: Handbook code (e.g., "prin") - extracted from chapter_id if not provided
         """
-        log.info(f"Loading chapter: {chapter_id}")
+        log.info(f"Loading all versions for chapter: {chapter_id}")
 
-        # Fetch chapter data from API
-        data = self.fetch_chapter_data(chapter_id)
-        if data is None:
-            log.warning(f"Skipping chapter {chapter_id} - no data")
+        # Get timeline for this chapter
+        try:
+            timeline_dates = self.api_client.fetch_timeline_entries(chapter_id)
+        except Exception as e:
+            log.error(f"Could not fetch timeline for {chapter_id}: {e}")
             return
 
-        if self.validate_only:
-            log.info(f"[VALIDATE MODE] Would load chapter {chapter_id} with {len(data.get('provisions', []))} provisions")
+        if not timeline_dates:
+            log.warning(f"No timeline entries found for {chapter_id}")
             return
 
-        # Load chapter node with all API fields
-        chapter_cypher = """
-        MERGE (c:Chapter {chapterId: $chapterId})
-        SET c.chapterName = $chapterName,
-            c.lastModifiedDate = $lastModifiedDate,
-            c.nextChapterId = $nextChapterId,
-            c.previousChapterId = $previousChapterId,
-            c.isChapterDeleted = $isChapterDeleted,
-            c.isSectionDeleted = $isSectionDeleted,
-            c.isHeaderDeleted = $isHeaderDeleted,
-            c.chapterDeletionMessage = $chapterDeletionMessage,
-            c.sectionDeletionMessage = $sectionDeletionMessage,
-            c.isChapterFutureVersion = $isChapterFutureVersion,
-            c.isSectionFutureVersion = $isSectionFutureVersion,
-            c.chapterFutureVersionMessage = $chapterFutureVersionMessage,
-            c.futureVersionDate = $futureVersionDate,
-            c.breadcrumbsJson = $breadcrumbsJson
+        log.info(f"Found {len(timeline_dates)} versions to load for {chapter_id}")
+
+        # Load each version (but skip individual version chain recalculation)
+        for i, date in enumerate(timeline_dates):
+            is_current = (i == 0)  # First date is newest/current
+            log.info(f"Loading version {i+1}/{len(timeline_dates)}: {date} {'(current)' if is_current else ''}")
+
+            try:
+                self.load_chapter(chapter_id, handbook_code, version_date=date, skip_version_chain_recalc=True)
+            except Exception as e:
+                log.error(f"Failed to load version {date} of {chapter_id}: {e}")
+                continue
+
+        # Now recalculate version chains for ALL entities across all loaded versions
+        log.info(f"Recalculating version chains across all {len(timeline_dates)} versions...")
+
+        # Get all section IDs for this chapter
+        section_ids_result = self.repository.query.run(
+            "MATCH (s:Section {chapterId: $chapterId}) RETURN DISTINCT s.sectionId as sectionId",
+            {'chapterId': chapter_id}
+        )
+        section_ids = [record['sectionId'] for record in section_ids_result]
+
+        if section_ids:
+            log.info(f"Recalculating version chains for {len(section_ids)} sections...")
+            self.repository.recalculate_version_chains_bulk('Section', 'sectionId', section_ids)
+
+        # Get all provision entity IDs for this chapter (across all versions)
+        # We need to use entityId (not provisionId) as it's stable across versions
+        provision_entity_ids_result = self.repository.query.run("""
+            MATCH (c:Chapter {chapterId: $chapterId})-[:CONTAINS*]->(p:Provision)
+            RETURN DISTINCT p.entityId as entityId
+        """, {'chapterId': chapter_id})
+        provision_entity_ids = [record['entityId'] for record in provision_entity_ids_result]
+
+        if provision_entity_ids:
+            log.info(f"Recalculating version chains for {len(provision_entity_ids)} provisions...")
+            self.repository.recalculate_version_chains_bulk('Provision', 'entityId', provision_entity_ids)
+
+        # Recalculate chapter version chain
+        log.info(f"Recalculating version chain for chapter {chapter_id}...")
+        self.repository.recalculate_version_chains_bulk('Chapter', 'chapterId', [chapter_id])
+
+        log.info(f"✓ Loaded {len(timeline_dates)} versions of {chapter_id}")
+
+    def load_chapter(self, chapter_id: str, handbook_code: Optional[str] = None, version_date: Optional[str] = None, skip_version_chain_recalc: bool = False):
         """
-
-        self.query.run(chapter_cypher, {
-            'chapterId': data.get('chapterId'),
-            'chapterName': data.get('chapterName'),
-            'lastModifiedDate': data.get('lastModifiedDate'),
-            'nextChapterId': data.get('nextChapterId'),
-            'previousChapterId': data.get('previousChapterId'),
-            'isChapterDeleted': data.get('isChapterDeleted', False),
-            'isSectionDeleted': data.get('isSectionDeleted', False),
-            'isHeaderDeleted': data.get('isHeaderDeleted', False),
-            'chapterDeletionMessage': data.get('chapterDeletionMessage', ''),
-            'sectionDeletionMessage': data.get('sectionDeletionMessage', ''),
-            'isChapterFutureVersion': data.get('isChapterFutureVersion', False),
-            'isSectionFutureVersion': data.get('isSectionFutureVersion', False),
-            'chapterFutureVersionMessage': data.get('chapterFutureVersionMessage'),
-            'futureVersionDate': data.get('futureVersionDate'),
-            'breadcrumbsJson': json.dumps(data.get('breadCrumbs', []))
-        })
-
-        # Create chapter navigation relationships
-        if data.get('nextChapterId'):
-            self.query.run("""
-                MATCH (c1:Chapter {chapterId: $chapterId})
-                MERGE (c2:Chapter {chapterId: $nextChapterId})
-                MERGE (c1)-[:NEXT]->(c2)
-            """, {'chapterId': data.get('chapterId'), 'nextChapterId': data.get('nextChapterId')})
-
-        if data.get('previousChapterId'):
-            self.query.run("""
-                MATCH (c1:Chapter {chapterId: $chapterId})
-                MERGE (c2:Chapter {chapterId: $previousChapterId})
-                MERGE (c1)-[:PREVIOUS]->(c2)
-            """, {'chapterId': data.get('chapterId'), 'previousChapterId': data.get('previousChapterId')})
-
-        # Load provisions
-        provisions = data.get('provisions', [])
-        if provisions:
-            self._load_provisions(data.get('chapterId'), provisions)
-
-        log.info(f"Loaded chapter {chapter_id} with {len(provisions)} provisions")
-
-    def _parse_hierarchy(self, provision_name: str) -> List[str]:
-        """
-        Parse provision name into hierarchical components
-
-        Examples:
-            "PRIN 3.1.1" -> ["PRIN", "3", "3.1", "3.1.1"]
-            "COBS 2.1.1A" -> ["COBS", "2", "2.1", "2.1.1A"]
+        Load a single chapter version into Neo4j with temporal versioning
 
         Args:
-            provision_name: Full provision name (e.g., "PRIN 3.1.1")
-
-        Returns:
-            List of hierarchical identifiers from broadest to most specific
+            chapter_id: Chapter identifier (e.g., "prin1")
+            handbook_code: Handbook code (e.g., "prin") - extracted from chapter_id if not provided
+            version_date: Specific version date to load (DD-MM-YYYY format). If None, uses config.load_date or current version
+            skip_version_chain_recalc: If True, skip version chain recalculation (useful when loading multiple versions)
         """
-        parts = provision_name.split()
-        if len(parts) < 2:
-            return [provision_name]
+        log.info(f"Loading chapter: {chapter_id}" + (f" (version: {version_date})" if version_date else ""))
 
-        handbook_code = parts[0]  # e.g., "PRIN", "COBS"
-        number_part = parts[1]     # e.g., "3.1.1", "2.1.1A"
-
-        # Split on dots to get hierarchy levels
-        levels = number_part.split('.')
-
-        # Build hierarchy: PRIN, 3, 3.1, 3.1.1
-        hierarchy = [handbook_code]
-        current = ""
-
-        for level in levels:
-            if current:
-                current += "." + level
-            else:
-                current = level
-            hierarchy.append(current)
-
-        return hierarchy
-
-    def _extract_cross_references(self, html_content: str, source_provision_id: int) -> List[Dict]:
-        """
-        Extract cross-references from HTML content
-
-        Parses the contentType HTML field to find:
-        - Cross-references to other provisions (in <span class="xref">)
-        - Direct handbook links
-
-        Args:
-            html_content: HTML content from provision's contentType field
-            source_provision_id: ID of the source provision
-
-        Returns:
-            List of cross-reference dictionaries with source, target info, and link text
-        """
-        from bs4 import BeautifulSoup
-        import re
-
-        if not html_content:
-            return []
-
-        cross_refs = []
+        # Extract handbook code from chapter_id if not provided
+        if not handbook_code:
+            # Extract letters from the beginning of chapter_id (e.g., "prin1" -> "prin")
+            import re
+            match = re.match(r'^([a-z]+)', chapter_id.lower())
+            handbook_code = match.group(1) if match else None
 
         try:
-            soup = BeautifulSoup(html_content, 'html.parser')
+            # Fetch chapter data from API (with specific version date if provided)
+            data = self.api_client.fetch_chapter_data(chapter_id, date=version_date)
+            if data is None:
+                log.warning(f"Skipping chapter {chapter_id} - no data")
+                return
 
-            # Find all xref spans (primary cross-references)
-            xrefs = soup.find_all('span', class_='xref')
+            # Determine version date
+            # Priority: 1) Explicit version_date parameter, 2) config.load_date, 3) lastModifiedDate from API
+            version_date_raw = version_date or self.config.load_date or data.get('lastModifiedDate')
+            if not version_date_raw:
+                raise DataValidationError(f"No version date available for {chapter_id}")
 
-            for xref in xrefs:
-                link = xref.find('a')
-                if not link:
-                    continue
+            version_date_iso = self.transformer.convert_fca_date_to_iso(version_date_raw)
+            log.info(f"Loading {chapter_id} version: {version_date_iso}")
 
-                href = link.get('href', '')
-                link_text = link.get_text().strip()
+            if self.config.validate_only:
+                log.info(f"[VALIDATE MODE] Would load chapter {chapter_id} with {len(data.get('provisions', []))} provisions")
+                return
 
-                if not href or not link_text:
-                    continue
+            # Check if this version already exists
+            if self.repository.chapter_version_exists(chapter_id, version_date_iso):
+                log.info(f"Version {version_date_iso} of {chapter_id} already exists, skipping")
+                return
 
-                # Parse target from href
-                # Examples:
-                #   /handbook/prin2 -> chapter reference
-                #   /handbook/gen2/gen2s2 -> section reference
-                #   /handbook/gen2/gen2s2#p40456 -> provision reference
+            # Transform chapter data
+            chapter = self.transformer.transform_chapter(data, version_date_iso)
 
-                # Extract target identifiers
-                target_info = self._parse_reference_target(href, link_text)
+            # Save chapter
+            self.repository.save_chapter(chapter)
 
-                if target_info:
-                    cross_refs.append({
-                        'sourceProvisionId': source_provision_id,
-                        'linkText': link_text,
-                        'href': href,
-                        **target_info
-                    })
+            # Create handbook-chapter relationship if handbook_code is available
+            if handbook_code:
+                self.repository.create_handbook_chapter_relationship(handbook_code, chapter_id)
 
+            # Create chapter navigation relationships (one-way)
+            self.repository.create_chapter_navigation_relationships(
+                chapter_id,
+                data.get('nextChapterId')
+            )
+
+            # Transform provisions and relationships
+            provisions_data = data.get('provisions', [])
+            if provisions_data:
+                sections_dict, provisions, hierarchy_rels, cross_refs, prov_glossary = \
+                    self.transformer.transform_provisions(provisions_data, chapter_id, version_date_iso)
+
+                # Save sections
+                sections_list = list(sections_dict.values())
+                if sections_list:
+                    self.repository.save_sections_batch(sections_list)
+
+                # Save provisions
+                if provisions:
+                    self.repository.save_provisions_batch(provisions)
+
+                # Save glossary terms
+                glossary_terms = self.transformer.transform_glossary_terms(provisions_data)
+                if glossary_terms:
+                    self.repository.save_glossary_terms_batch(list(glossary_terms.values()))
+
+                # Create hierarchy relationships
+                if hierarchy_rels:
+                    self.repository.create_hierarchy_relationships_batch(hierarchy_rels)
+
+                # Create provision-glossary relationships
+                if prov_glossary:
+                    self.repository.create_provision_glossary_relationships_batch(prov_glossary)
+
+                # Create cross-references
+                if cross_refs:
+                    self.repository.create_cross_references_batch(cross_refs)
+
+                # Recalculate version chains (bulk operation) - unless skipped
+                if not skip_version_chain_recalc:
+                    section_ids = list(sections_dict.keys())
+                    provision_ids = [str(p.provision_id) for p in provisions]
+
+                    if section_ids:
+                        log.info(f"Recalculating version chains for {len(section_ids)} sections...")
+                        self.repository.recalculate_version_chains_bulk('Section', 'sectionId', section_ids)
+
+                    if provision_ids:
+                        log.info(f"Recalculating version chains for {len(provision_ids)} provisions...")
+                        self.repository.recalculate_version_chains_bulk('Provision', 'provisionId', provision_ids)
+
+            # Recalculate chapter version chain - unless skipped
+            if not skip_version_chain_recalc:
+                log.info(f"Recalculating version chain for chapter {chapter_id}...")
+                self.repository.recalculate_version_chains_bulk('Chapter', 'chapterId', [chapter_id])
+
+            log.info(f"✓ Loaded chapter {chapter_id} version {version_date_iso} with {len(provisions_data)} provisions")
+
+        except DataValidationError as e:
+            log.error(f"Data validation error for {chapter_id}: {e}")
+            raise
+        except Neo4jOperationError as e:
+            log.error(f"Neo4j operation error for {chapter_id}: {e}")
+            raise
         except Exception as e:
-            log.warning(f"Error parsing cross-references for provision {source_provision_id}: {e}")
-
-        return cross_refs
-
-    def _parse_reference_target(self, href: str, link_text: str) -> Optional[Dict]:
-        """
-        Parse reference target from href to determine what it points to
-
-        Args:
-            href: Link href (e.g., "/handbook/prin2", "/handbook/gen2/gen2s2#p40456")
-            link_text: Display text of the link
-
-        Returns:
-            Dictionary with targetType and targetId, or None if invalid
-        """
-        import re
-
-        # Remove leading/trailing slashes and whitespace
-        href = href.strip().strip('/')
-
-        # Pattern: handbook/CHAPTER or handbook/CHAPTER/SECTION or handbook/CHAPTER#anchor
-        match = re.match(r'handbook/([a-z0-9]+)(?:/([a-z0-9s]+))?(?:#(.+))?', href.lower())
-
-        if not match:
-            return None
-
-        chapter_id = match.group(1)
-        section_id = match.group(2)
-        anchor = match.group(3)
-
-        if anchor:
-            # Provision reference (has anchor like #p40456)
-            return {
-                'targetType': 'provision',
-                'targetChapterId': chapter_id,
-                'targetSectionId': section_id,
-                'targetAnchor': anchor
-            }
-        elif section_id:
-            # Section reference
-            return {
-                'targetType': 'section',
-                'targetChapterId': chapter_id,
-                'targetSectionId': section_id
-            }
-        else:
-            # Chapter reference
-            return {
-                'targetType': 'chapter',
-                'targetChapterId': chapter_id
-            }
-
-    def _load_provisions(self, chapter_id: str, provisions: List[Dict]):
-        """
-        Load provisions and build hierarchical structure in Neo4j
-
-        Creates hierarchy: Chapter -> Section -> Subsection -> Provision
-        Based on provision names like "PRIN 3.1.1":
-          - PRIN 3 = Chapter
-          - PRIN 3.1 = Section
-          - PRIN 3.1.1 = Provision
-
-        Args:
-            chapter_id: Parent chapter ID
-            provisions: List of provision dictionaries
-        """
-        # Track all nodes to create
-        all_sections = {}  # section_id -> section_data
-        provision_data = []
-        glossary_data = []
-        glossary_relationships = []
-        hierarchy_relationships = []
-        cross_references = []
-
-        for prov in provisions:
-            provision_name = prov.get('provisionName', '')
-            provision_id = prov.get('provisionId')
-
-            # Parse hierarchy from provision name (e.g., "PRIN 3.1.1" -> ["PRIN", "3", "3.1", "3.1.1"])
-            hierarchy = self._parse_hierarchy(provision_name)
-
-            # Create section nodes for each level in the hierarchy
-            # e.g., for "PRIN 3.1.1": create sections for "3", "3.1"
-            handbook_code = hierarchy[0] if hierarchy else chapter_id.upper()
-
-            for i in range(1, len(hierarchy) - 1):  # Skip handbook code and final provision
-                section_num = hierarchy[i]
-                section_id = f"{handbook_code.lower()}{section_num}"
-
-                if section_id not in all_sections:
-                    # Determine section name based on level
-                    if i == 1:
-                        # Top level section (e.g., "3" in "PRIN 3.1.1")
-                        section_name = f"{handbook_code} {section_num}"
-                    else:
-                        # Subsection (e.g., "3.1" in "PRIN 3.1.1")
-                        section_name = f"{handbook_code} {section_num}"
-
-                    all_sections[section_id] = {
-                        'sectionId': section_id,
-                        'sectionName': section_name,
-                        'sectionNumber': section_num,
-                        'level': i,
-                        'chapterId': chapter_id
-                    }
-
-                # Create hierarchy relationship
-                if i > 1:
-                    # Parent is the previous level
-                    parent_num = hierarchy[i-1]
-                    parent_id = f"{handbook_code.lower()}{parent_num}"
-
-                    hierarchy_relationships.append({
-                        'parent_id': parent_id,
-                        'child_id': section_id
-                    })
-                else:
-                    # Top-level section connects to chapter
-                    hierarchy_relationships.append({
-                        'parent_type': 'Chapter',
-                        'parent_id': chapter_id,
-                        'child_type': 'Section',
-                        'child_id': section_id
-                    })
-
-            # Add provision
-            # Provision connects to its immediate parent section
-            if len(hierarchy) >= 2:
-                parent_section_num = hierarchy[-2]  # Second to last is parent
-                parent_section_id = f"{handbook_code.lower()}{parent_section_num}"
-
-                provision_data.append({
-                    'provisionId': provision_id,
-                    'entityId': prov.get('entityId'),
-                    'provisionName': provision_name,
-                    'provisionNumber': hierarchy[-1] if hierarchy else '',
-                    'provisionType': prov.get('provisionType'),
-                    'provisionTypeId': prov.get('provisionTypeId'),
-                    'provisionTagId': prov.get('provisionTagId'),
-                    'contentText': prov.get('contentText', ''),
-                    'contentType': prov.get('contentType', ''),
-                    'timeline': prov.get('timeline'),
-                    'isDeleted': prov.get('isDeleted', False),
-                    'sectionId': prov.get('sectionId'),
-                    'sectionName': prov.get('sectionName'),
-                    'sectionHeader': prov.get('sectionHeader', ''),
-                    'sectionFooter': prov.get('sectionFooter', ''),
-                    'subSectionName': prov.get('subSectionName', ''),
-                    'metadataCountsJson': json.dumps(prov.get('metadataCounts', [])),
-                    'parentSectionId': parent_section_id
-                })
-
-            # Track glossary terms
-            for term in prov.get('glossaryTerm', []):
-                term_id = term.get('termId')
-                if term_id:
-                    if term_id not in [t['termId'] for t in glossary_data]:
-                        glossary_data.append({
-                            'termId': term_id,
-                            'name': term.get('name'),
-                            'link': term.get('link')
-                        })
-
-                    glossary_relationships.append({
-                        'provisionId': provision_id,
-                        'termId': term_id
-                    })
-
-            # Extract cross-references from HTML content
-            html_content = prov.get('contentType', '')
-            if html_content:
-                provision_cross_refs = self._extract_cross_references(html_content, provision_id)
-                cross_references.extend(provision_cross_refs)
-
-        # Batch load sections
-        section_list = list(all_sections.values())
-        if section_list:
-            log.info(f"Loading {len(section_list)} sections in hierarchy...")
-            log.debug(f"Sample section data: {section_list[0] if section_list else 'none'}")
-
-            section_cypher = """
-            UNWIND $batch AS row
-            MERGE (s:Section {sectionId: row.sectionId})
-            SET s.sectionName = row.sectionName,
-                s.sectionNumber = row.sectionNumber,
-                s.level = row.level,
-                s.chapterId = row.chapterId
-            """
-            self.query.run_batched(section_cypher, section_list, batch_size=self.batch_size)
-
-        # Batch load provisions
-        if provision_data:
-            log.info(f"Loading {len(provision_data)} provisions...")
-            log.debug(f"Sample provision data: {provision_data[0] if provision_data else 'none'}")
-
-            provision_cypher = """
-            UNWIND $batch AS row
-            MERGE (p:Provision {provisionId: row.provisionId})
-            SET p.entityId = row.entityId,
-                p.provisionName = row.provisionName,
-                p.provisionNumber = row.provisionNumber,
-                p.provisionType = row.provisionType,
-                p.provisionTypeId = row.provisionTypeId,
-                p.provisionTagId = row.provisionTagId,
-                p.contentText = row.contentText,
-                p.contentType = row.contentType,
-                p.timeline = row.timeline,
-                p.isDeleted = row.isDeleted,
-                p.sectionId = row.sectionId,
-                p.sectionName = row.sectionName,
-                p.sectionHeader = row.sectionHeader,
-                p.sectionFooter = row.sectionFooter,
-                p.subSectionName = row.subSectionName,
-                p.metadataCountsJson = row.metadataCountsJson,
-                p.parentSectionId = row.parentSectionId
-            """
-            self.query.run_batched(provision_cypher, provision_data, batch_size=self.batch_size)
-
-        # Create hierarchy relationships (Chapter -> Section, Section -> Section, Section -> Provision)
-        if hierarchy_relationships:
-            log.info(f"Creating {len(hierarchy_relationships)} hierarchy relationships...")
-
-            # Split into chapter-to-section and section-to-section relationships
-            chapter_to_section = [r for r in hierarchy_relationships if 'parent_type' in r]
-            section_to_section = [r for r in hierarchy_relationships if 'parent_type' not in r]
-
-            # Chapter -> Section relationships
-            if chapter_to_section:
-                chapter_section_cypher = """
-                UNWIND $batch AS row
-                MATCH (c:Chapter {chapterId: row.parent_id})
-                MATCH (s:Section {sectionId: row.child_id})
-                MERGE (c)-[:CONTAINS]->(s)
-                """
-                self.query.run_batched(chapter_section_cypher, chapter_to_section, batch_size=self.batch_size)
-
-            # Section -> Section relationships (hierarchy)
-            if section_to_section:
-                section_hierarchy_cypher = """
-                UNWIND $batch AS row
-                MATCH (parent:Section {sectionId: row.parent_id})
-                MATCH (child:Section {sectionId: row.child_id})
-                MERGE (parent)-[:CONTAINS]->(child)
-                """
-                self.query.run_batched(section_hierarchy_cypher, section_to_section, batch_size=self.batch_size)
-
-        # Section -> Provision relationships
-        if provision_data:
-            log.info(f"Connecting provisions to sections...")
-            provision_section_cypher = """
-            UNWIND $batch AS row
-            MATCH (s:Section {sectionId: row.parentSectionId})
-            MATCH (p:Provision {provisionId: row.provisionId})
-            MERGE (s)-[:CONTAINS]->(p)
-            """
-            self.query.run_batched(provision_section_cypher, provision_data, batch_size=self.batch_size)
-
-        # Batch load glossary terms
-        if glossary_data:
-            log.info(f"Loading {len(glossary_data)} glossary terms...")
-            glossary_cypher = """
-            UNWIND $batch AS row
-            MERGE (t:GlossaryTerm {termId: row.termId})
-            SET t.name = row.name,
-                t.link = row.link
-            """
-            self.query.run_batched(glossary_cypher, glossary_data, batch_size=self.batch_size)
-
-        # Batch load glossary relationships
-        if glossary_relationships:
-            log.info(f"Loading {len(glossary_relationships)} glossary relationships...")
-            glossary_rel_cypher = """
-            UNWIND $batch AS row
-            MATCH (p:Provision {provisionId: row.provisionId})
-            MATCH (t:GlossaryTerm {termId: row.termId})
-            MERGE (p)-[:DEFINES]->(t)
-            """
-            self.query.run_batched(glossary_rel_cypher, glossary_relationships, batch_size=self.batch_size)
-
-        # Batch load cross-references
-        if cross_references:
-            log.info(f"Loading {len(cross_references)} cross-references...")
-
-            # Group by target type for efficient loading
-            chapter_refs = [r for r in cross_references if r['targetType'] == 'chapter']
-            section_refs = [r for r in cross_references if r['targetType'] == 'section']
-            provision_refs = [r for r in cross_references if r['targetType'] == 'provision']
-
-            # Chapter references
-            if chapter_refs:
-                log.info(f"  - {len(chapter_refs)} chapter references")
-                chapter_ref_cypher = """
-                UNWIND $batch AS row
-                MATCH (source:Provision {provisionId: row.sourceProvisionId})
-                MERGE (target:Chapter {chapterId: row.targetChapterId})
-                MERGE (source)-[:REFERENCES {
-                    linkText: row.linkText,
-                    targetType: row.targetType,
-                    href: row.href
-                }]->(target)
-                """
-                self.query.run_batched(chapter_ref_cypher, chapter_refs, batch_size=self.batch_size)
-
-            # Section references
-            if section_refs:
-                log.info(f"  - {len(section_refs)} section references")
-                section_ref_cypher = """
-                UNWIND $batch AS row
-                MATCH (source:Provision {provisionId: row.sourceProvisionId})
-                MERGE (target:Section {sectionId: row.targetSectionId})
-                MERGE (source)-[:REFERENCES {
-                    linkText: row.linkText,
-                    targetType: row.targetType,
-                    href: row.href
-                }]->(target)
-                """
-                self.query.run_batched(section_ref_cypher, section_refs, batch_size=self.batch_size)
-
-            # Provision references (by anchor)
-            if provision_refs:
-                log.info(f"  - {len(provision_refs)} provision references (by anchor)")
-
-                # Extract provisionId from anchors like #p22 or #p40456
-                for ref in provision_refs:
-                    anchor = ref.get('targetAnchor', '')
-                    if anchor and anchor.startswith('p'):
-                        try:
-                            ref['targetProvisionId'] = int(anchor[1:])  # Remove 'p' prefix
-                        except ValueError:
-                            log.warning(f"Could not parse provision ID from anchor: {anchor}")
-
-                # Filter to only those with valid provisionId
-                valid_provision_refs = [r for r in provision_refs if 'targetProvisionId' in r]
-
-                if valid_provision_refs:
-                    provision_ref_cypher = """
-                    UNWIND $batch AS row
-                    MATCH (source:Provision {provisionId: row.sourceProvisionId})
-                    MERGE (target:Provision {provisionId: row.targetProvisionId})
-                    MERGE (source)-[:REFERENCES {
-                        linkText: row.linkText,
-                        targetType: row.targetType,
-                        href: row.href
-                    }]->(target)
-                    """
-                    self.query.run_batched(provision_ref_cypher, valid_provision_refs, batch_size=self.batch_size)
-                    log.info(f"    Created {len(valid_provision_refs)} provision-to-provision references")
+            log.error(f"Unexpected error loading {chapter_id}: {e}")
+            raise
 
     def run(self, handbook: Optional[str] = None, chapters: Optional[List[str]] = None):
         """
@@ -858,37 +377,106 @@ class FCAHandbookAPILoader:
             handbook: Handbook prefix to discover and load (e.g., "prin")
             chapters: Specific chapter IDs to load (e.g., ["prin1", "prin2"])
         """
+        handbook_code = None
+
         if handbook:
             log.info(f"Starting FCA Handbook ingestion for: {handbook.upper()}")
-            chapters = self.discover_chapters(handbook.lower())
+            handbook_code = handbook.lower()
+            chapters = self.discover_chapters(handbook_code)
+
+            # Create handbook node if not in validate-only mode
+            if not self.config.validate_only and handbook_code:
+                # Fetch handbook name from API
+                try:
+                    all_handbooks = self.api_client.get_all_handbooks()
+                    handbook_name = all_handbooks.get(handbook_code, handbook_code.upper())
+
+                    handbook_obj = self.transformer.transform_handbook(handbook_code, handbook_name)
+                    self.repository.save_handbook(handbook_obj)
+                    log.info(f"Created handbook node: {handbook_code} - {handbook_name}")
+                except Exception as e:
+                    log.warning(f"Could not create handbook node: {e}")
+
         elif chapters:
             log.info(f"Starting FCA Handbook ingestion for specific chapters: {chapters}")
+            # Try to extract handbook code from first chapter
+            if chapters:
+                import re
+                match = re.match(r'^([a-z]+)', chapters[0].lower())
+                handbook_code = match.group(1) if match else None
+
+                # Create handbook node if not in validate-only mode
+                if not self.config.validate_only and handbook_code:
+                    try:
+                        all_handbooks = self.api_client.get_all_handbooks()
+                        handbook_name = all_handbooks.get(handbook_code, handbook_code.upper())
+
+                        handbook_obj = self.transformer.transform_handbook(handbook_code, handbook_name)
+                        self.repository.save_handbook(handbook_obj)
+                        log.info(f"Created handbook node: {handbook_code} - {handbook_name}")
+                    except Exception as e:
+                        log.warning(f"Could not create handbook node: {e}")
         else:
             log.error("Must specify either --handbook or --chapters")
             return
 
-        log.info(f"Mode: {'VALIDATE ONLY' if self.validate_only else 'LOAD TO NEO4J'}")
-        log.info(f"Batch size: {self.batch_size}")
+        log.info(f"Mode: {'VALIDATE ONLY' if self.config.validate_only else 'LOAD TO NEO4J'}")
+        log.info(f"Batch size: {self.config.batch_size}")
         log.info(f"Total chapters to process: {len(chapters)}")
 
         # Load each chapter
+        success_count = 0
+        error_count = 0
+
         for i, chapter_id in enumerate(chapters, 1):
+            log.info(f"\n{'='*80}")
             log.info(f"Processing chapter {i}/{len(chapters)}: {chapter_id}")
-            self.load_chapter(chapter_id)
+            log.info(f"{'='*80}")
 
-        log.info(f"Ingestion complete: {len(chapters)} chapters processed")
+            try:
+                if self.config.load_all_versions:
+                    # Load all historical versions using Timeline API
+                    self.load_chapter_versions(chapter_id, handbook_code)
+                else:
+                    # Load single version (current or specified via --date)
+                    self.load_chapter(chapter_id, handbook_code)
+                success_count += 1
+            except (DataValidationError, Neo4jOperationError) as e:
+                log.error(f"Failed to load {chapter_id}: {e}")
+                error_count += 1
+            except Exception as e:
+                log.error(f"Unexpected error loading {chapter_id}: {e}")
+                error_count += 1
 
-        # Close Neo4j connection
-        if not self.validate_only:
-            self.query.close()
+        log.info(f"\n{'='*80}")
+        log.info(f"Ingestion complete:")
+        log.info(f"  ✓ Successful: {success_count}/{len(chapters)}")
+        if error_count > 0:
+            log.info(f"  ✗ Failed: {error_count}/{len(chapters)}")
+        log.info(f"{'='*80}\n")
+
+    def close(self):
+        """Clean up resources"""
+        if self.api_client:
+            self.api_client.close()
+        if self.repository:
+            self.repository.close()
 
 
 def main():
     """Main entry point with argument parsing"""
 
     # Create temp loader just to fetch handbooks list
-    temp_loader = FCAHandbookAPILoader(validate_only=True)
-    available_handbooks = temp_loader.get_all_handbooks()
+    temp_config = LoaderConfig(validate_only=True)
+    temp_client = FCAAPIClient(temp_config)
+
+    try:
+        available_handbooks = temp_client.get_all_handbooks()
+    except Exception as e:
+        log.error(f"Could not fetch handbooks list: {e}")
+        available_handbooks = {}
+    finally:
+        temp_client.close()
 
     parser = argparse.ArgumentParser(
         description='Load FCA Handbook content from REST API into Neo4j',
@@ -896,16 +484,19 @@ def main():
         epilog=f"""
 Examples:
   # List all available handbooks
-  python workspace/generated/fca_handbook_loader.py --list-handbooks
+  python workspace/generated/fca_handbook_loader_v2.py --list-handbooks
 
   # Load all PRIN chapters
-  python workspace/generated/fca_handbook_loader.py --handbook prin
+  python workspace/generated/fca_handbook_loader_v2.py --handbook prin
 
   # Load specific chapters
-  python workspace/generated/fca_handbook_loader.py --chapters prin1 prin2 prin3
+  python workspace/generated/fca_handbook_loader_v2.py --chapters prin1 prin2 prin3
 
   # Validate without loading
-  python workspace/generated/fca_handbook_loader.py --handbook prin --validate-only
+  python workspace/generated/fca_handbook_loader_v2.py --handbook prin --validate-only
+
+  # Load historical version
+  python workspace/generated/fca_handbook_loader_v2.py --handbook prin --date 01-01-2020
 
 Total available handbooks: {len(available_handbooks)}
 Common handbooks: prin, sysc, cobs, coll, conc, mcob, bcobs, fees
@@ -944,6 +535,19 @@ Common handbooks: prin, sysc, cobs, coll, conc, mcob, bcobs, fees
         help='Validate data without loading to Neo4j'
     )
 
+    parser.add_argument(
+        '--date',
+        type=str,
+        default=None,
+        help='Historical date to load (format: DD-MM-YYYY). If not specified, loads current version.'
+    )
+
+    parser.add_argument(
+        '--load-all-versions',
+        action='store_true',
+        help='Load all historical versions using Timeline API (ignores --date)'
+    )
+
     args = parser.parse_args()
 
     # Handle --list-handbooks
@@ -956,7 +560,7 @@ Common handbooks: prin, sysc, cobs, coll, conc, mcob, bcobs, fees
             print(f"  {code:15} - {name}")
 
         print(f"\n{'='*80}")
-        print(f"Usage: python workspace/generated/fca_handbook_loader.py --handbook <code>")
+        print(f"Usage: python workspace/generated/fca_handbook_loader_v2.py --handbook <code>")
         print(f"{'='*80}\n")
         return
 
@@ -970,22 +574,33 @@ Common handbooks: prin, sysc, cobs, coll, conc, mcob, bcobs, fees
         log.info(f"Use --list-handbooks to see all {len(available_handbooks)} available handbooks")
         return
 
-    # Create and run loader
-    try:
-        loader = FCAHandbookAPILoader(
-            batch_size=args.batch_size,
-            validate_only=args.validate_only
-        )
+    # Create configuration
+    config = LoaderConfig(
+        batch_size=args.batch_size,
+        validate_only=args.validate_only,
+        load_date=args.date,
+        load_all_versions=args.load_all_versions
+    )
 
+    # Create and run loader
+    loader = None
+    try:
+        loader = FCAHandbookLoader(config)
         loader.run(
             handbook=args.handbook,
             chapters=args.chapters
         )
     except KeyboardInterrupt:
-        log.info("Interrupted by user")
+        log.info("\nInterrupted by user")
+    except FCALoaderError as e:
+        log.error(f"Loader error: {e}")
+        raise
     except Exception as e:
         log.error(f"Fatal error: {e}")
         raise
+    finally:
+        if loader:
+            loader.close()
 
 
 if __name__ == '__main__':
