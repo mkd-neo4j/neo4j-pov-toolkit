@@ -1,0 +1,453 @@
+/* =============================================================================
+   Time-Slice demo — app-specific styling on top of Neo4j brand tokens.
+   All colors, fonts, radii come from neo4j-brand.css custom properties.
+   ============================================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--neo4j-neutral-bg-default);
+  color: var(--neo4j-neutral-text-default);
+  font-family: "Public Sans", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+h1 {
+  font-family: "SyneNeo", "Public Sans", sans-serif;
+  font-weight: 600;
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+  color: var(--neo4j-neutral-text-default);
+}
+
+h2 {
+  font-family: "Public Sans", sans-serif;
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--neo4j-neutral-text-default);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  color: var(--neo4j-neutral-text-weak);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.app-header {
+  padding: 2rem 2.5rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--neo4j-neutral-bg-weak);
+  border-bottom: 1px solid var(--neo4j-neutral-border-weak);
+}
+
+.app-logo {
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.app-title .subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--neo4j-neutral-text-weak);
+  font-size: 0.95rem;
+  max-width: 70ch;
+}
+
+/* ── Connection strip ────────────────────────────────────────────────────── */
+
+.connection {
+  padding: 0.75rem 2.5rem;
+  background: var(--neo4j-neutral-bg-weak);
+  border-bottom: 1px solid var(--neo4j-neutral-border-weak);
+}
+.connection-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.connection-label {
+  color: var(--neo4j-neutral-text-weaker);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+.connection-status {
+  margin-left: auto;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 500;
+  background: var(--neo4j-neutral-bg-strong);
+  color: var(--neo4j-neutral-text-weak);
+}
+.connection-status[data-state="ok"] {
+  background: var(--neo4j-success-bg-weak);
+  color: var(--neo4j-success-text);
+}
+.connection-status[data-state="error"] {
+  background: var(--neo4j-danger-bg-weak);
+  color: var(--neo4j-danger-text);
+}
+
+/* ── Main layout ─────────────────────────────────────────────────────────── */
+
+.app-main {
+  max-width: 1200px;
+  margin: 1.5rem auto;
+  padding: 0 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.card {
+  background: var(--neo4j-neutral-bg-weak);
+  border: 1px solid var(--neo4j-neutral-border-weak);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.card-lede {
+  margin: 0 0 1rem;
+  color: var(--neo4j-neutral-text-weak);
+  font-size: 0.9rem;
+}
+
+/* ── Day buttons ─────────────────────────────────────────────────────────── */
+
+.day-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+}
+
+.day-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--neo4j-neutral-border-weak);
+  background: var(--neo4j-neutral-bg-weak);
+  color: var(--neo4j-neutral-text-default);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.1s, box-shadow 0.1s, transform 0.05s;
+}
+.day-btn:hover:not(:disabled) {
+  border-color: var(--neo4j-primary-border-strong);
+  box-shadow: 0 1px 0 var(--neo4j-primary-hover-weak);
+}
+.day-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.day-btn .day-name {
+  font-family: "SyneNeo", "Public Sans", sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.day-btn .day-date {
+  color: var(--neo4j-neutral-text-weaker);
+  font-size: 0.8rem;
+}
+.day-btn .day-preview {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--neo4j-neutral-text-weak);
+  min-height: 1em;
+}
+
+.day-btn[data-state="ingested"] {
+  background: var(--neo4j-success-bg-weak);
+  border-color: var(--neo4j-success-border-weak);
+  color: var(--neo4j-success-text);
+  cursor: default;
+}
+.day-btn[data-state="ingested"] .day-name::after {
+  content: " ✓";
+}
+.day-btn[data-state="ingested"] .day-date,
+.day-btn[data-state="ingested"] .day-preview {
+  color: var(--neo4j-success-text);
+  opacity: 0.85;
+}
+
+.day-btn:disabled:not([data-state="ingested"]) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.btn {
+  border: 1px solid var(--neo4j-neutral-border-strong);
+  background: var(--neo4j-neutral-bg-weak);
+  color: var(--neo4j-neutral-text-default);
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn:hover {
+  background: var(--neo4j-neutral-hover);
+}
+.btn-danger {
+  border-color: var(--neo4j-danger-border-weak);
+  color: var(--neo4j-danger-text);
+  background: var(--neo4j-neutral-bg-weak);
+}
+.btn-danger:hover {
+  background: var(--neo4j-danger-bg-weak);
+}
+.btn-sm {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.7rem;
+}
+
+/* ── Time slider ─────────────────────────────────────────────────────────── */
+
+.slider-readout {
+  font-family: "SyneNeo", "Public Sans", sans-serif;
+  font-weight: 600;
+  font-size: 1.4rem;
+  color: var(--neo4j-primary-text);
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.01em;
+  min-height: 1.4em;
+}
+
+.time-slider {
+  --available-pct: 0%;
+  --track-color: var(--neo4j-primary-bg-strong);   /* Baltic-50 */
+  --track-empty: transparent;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  border-radius: 999px;
+  outline: none;
+  margin-bottom: 0.4rem;
+  /* Visible track only up to --available-pct; nothing past that. */
+  background: linear-gradient(
+    to right,
+    var(--track-color) 0%,
+    var(--track-color) var(--available-pct),
+    var(--track-empty) var(--available-pct),
+    var(--track-empty) 100%
+  );
+  /* Subtle baseline so the scale still reads as "a timeline". */
+  box-shadow: inset 0 0 0 1px var(--neo4j-neutral-border-weak);
+  transition: background 0.25s;
+}
+.time-slider:disabled { cursor: not-allowed; }
+
+.time-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: var(--neo4j-primary-bg-strong);
+  border: 3px solid var(--neo4j-neutral-bg-weak);
+  box-shadow: 0 0 0 1px var(--neo4j-primary-bg-strong),
+              0 2px 6px rgba(10, 97, 144, 0.25);
+  cursor: grab;
+}
+.time-slider::-webkit-slider-thumb:active { cursor: grabbing; }
+.time-slider:disabled::-webkit-slider-thumb {
+  opacity: 0;  /* hide thumb entirely when no data is available */
+}
+.time-slider::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: var(--neo4j-primary-bg-strong);
+  border: 3px solid var(--neo4j-neutral-bg-weak);
+  box-shadow: 0 0 0 1px var(--neo4j-primary-bg-strong),
+              0 2px 6px rgba(10, 97, 144, 0.25);
+  cursor: grab;
+}
+.time-slider:disabled::-moz-range-thumb { opacity: 0; }
+
+.slider-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--neo4j-neutral-text-weaker);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  padding: 0 2px;
+}
+
+/* ── Query inspector (details/summary disclosure) ────────────────────────── */
+
+.query-inspector {
+  margin-top: 1rem;
+  border-top: 1px solid var(--neo4j-neutral-border-weak);
+  padding-top: 0.75rem;
+}
+.query-inspector summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--neo4j-primary-text);
+  font-weight: 500;
+  font-size: 0.9rem;
+  list-style: none;
+  user-select: none;
+}
+.query-inspector summary::-webkit-details-marker { display: none; }
+.query-inspector summary::marker { display: none; content: ""; }
+.query-inspector summary:hover { color: var(--neo4j-primary-hover-strong); }
+.disclosure-arrow {
+  width: 12px;
+  height: 8px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.query-inspector[open] .disclosure-arrow { transform: rotate(180deg); }
+.query-toggle-hint {
+  margin-left: auto;
+  color: var(--neo4j-neutral-text-weaker);
+  font-weight: 400;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.query-inspector-body {
+  margin-top: 0.75rem;
+}
+.query-call {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+.query-call-label {
+  color: var(--neo4j-neutral-text-weaker);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.query-call code {
+  color: var(--neo4j-neutral-text-default);
+  font-size: 0.85rem;
+}
+
+.cypher-block {
+  background: var(--neo4j-neutral-bg-default);
+  border: 1px solid var(--neo4j-neutral-border-weak);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 0;
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.cypher-block code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--neo4j-neutral-text-default);
+  white-space: pre;
+  display: block;
+}
+.cypher-block .tok-comment  { color: var(--neo4j-code-comment); font-style: italic; }
+.cypher-block .tok-keyword  { color: var(--neo4j-code-keyword); font-weight: 600; }
+.cypher-block .tok-function { color: var(--neo4j-code-function); }
+.cypher-block .tok-label    { color: var(--neo4j-code-label); }
+.cypher-block .tok-property { color: var(--neo4j-code-property); }
+.cypher-block .tok-param    { color: var(--neo4j-code-param); font-weight: 500; }
+.cypher-block .tok-number   { color: var(--neo4j-code-number); }
+.cypher-block .tok-string   { color: var(--neo4j-code-string); }
+
+/* ── Graph canvas ────────────────────────────────────────────────────────── */
+
+.graph-card {
+  padding-bottom: 1rem;
+}
+.snapshot-stats {
+  color: var(--neo4j-neutral-text-weak);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.nvl-canvas {
+  width: 100%;
+  height: 520px;
+  min-height: 520px;
+  border-radius: 10px;
+  background: var(--neo4j-neutral-bg-default);
+  border: 1px solid var(--neo4j-neutral-border-weak);
+  overflow: hidden;
+  position: relative;
+}
+.nvl-canvas::before {
+  content: "Ingest a day (above) to see the graph.";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--neo4j-neutral-text-weaker);
+  font-size: 0.9rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 1;
+}
+.nvl-canvas[data-empty="true"]::before {
+  opacity: 1;
+}
+.graph-hint {
+  margin-top: 0.5rem;
+  color: var(--neo4j-neutral-text-weaker);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: var(--neo4j-neutral-bg-strongest);
+  color: var(--neo4j-neutral-text-inverse);
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  max-width: 360px;
+}
+.toast[data-level="error"] {
+  background: var(--neo4j-danger-bg-strong);
+}
+.toast[data-level="success"] {
+  background: var(--neo4j-success-bg-strong);
+}

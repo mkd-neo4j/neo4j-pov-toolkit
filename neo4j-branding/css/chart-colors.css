@@ -1,0 +1,20 @@
+/* =============================================================================
+   Neo4j Categorical Chart Colors
+   12 ordered colors for data visualization (line, bar, pie charts).
+   Source of truth: ../colors/categorical-colours/CATEGORICAL-COLOURS.md
+   ============================================================================= */
+
+:root {
+    --neo4j-chart-1: #55bdc5; /* Teal — Bright cyan-teal */
+    --neo4j-chart-2: #4d49cb; /* Indigo — Deep blue-violet */
+    --neo4j-chart-3: #dc8b39; /* Orange — Warm amber-orange */
+    --neo4j-chart-4: #c9458d; /* Magenta — Vivid rose-magenta */
+    --neo4j-chart-5: #8e8cf3; /* Lavender — Soft periwinkle */
+    --neo4j-chart-6: #78de7c; /* Green — Bright lime-green */
+    --neo4j-chart-7: #3f80e3; /* Blue — Medium cobalt-blue */
+    --neo4j-chart-8: #673fab; /* Purple — Deep violet */
+    --neo4j-chart-9: #dbbf40; /* Gold — Warm mustard-gold */
+    --neo4j-chart-10: #bf732d; /* Brown — Warm copper-brown */
+    --neo4j-chart-11: #478a6e; /* Sea-green — Muted teal-green */
+    --neo4j-chart-12: #ade86b; /* Lime — Bright yellow-green */
+}

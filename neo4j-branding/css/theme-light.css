@@ -1,0 +1,124 @@
+/* =============================================================================
+   Neo4j Light Theme — Semantic UI Tokens
+   Light theme is the default (applied to :root).
+   Source of truth: ../colors/light-themes/LIGHT-THEME.md
+   ============================================================================= */
+
+:root {
+    /* ── Neutral ── */
+
+    /* Text & Icon */
+    --neo4j-neutral-text-weakest: #818790; /* Neutral-45 */
+    --neo4j-neutral-text-weaker: #5e636a; /* Neutral-55 */
+    --neo4j-neutral-text-weak: #4d5157; /* Neutral-60 */
+    --neo4j-neutral-text-default: #1a1b1d; /* Neutral-75 */
+    --neo4j-neutral-icon: #4d5157; /* Neutral-60 */
+    --neo4j-neutral-text-inverse: #ffffff; /* Neutral-10 */
+
+    /* Background */
+    --neo4j-neutral-bg-weak: #ffffff; /* Neutral-10 */
+    --neo4j-neutral-bg-default: #f5f6f6; /* Neutral-15 */
+    --neo4j-neutral-on-bg-weak: #f5f6f6; /* Neutral-15 */
+    --neo4j-neutral-bg-strong: #e2e3e5; /* Neutral-20 */
+    --neo4j-neutral-bg-stronger: #a8acb2; /* Neutral-35 */
+    --neo4j-neutral-bg-strongest: #3c3f44; /* Neutral-65 */
+    --neo4j-neutral-bg-status: #a8acb2; /* Neutral-35 */
+
+    /* Border */
+    --neo4j-neutral-border-weak: #e2e3e5; /* Neutral-20 */
+    --neo4j-neutral-border-strong: #bbbec3; /* Neutral-30 */
+    --neo4j-neutral-border-strongest: #6f757e; /* Neutral-50 */
+
+    /* Hover & Pressed */
+    --neo4j-neutral-hover: rgba(111, 117, 126, 0.1); /* Neutral-50 @ 10% */
+    --neo4j-neutral-pressed: rgba(111, 117, 126, 0.2); /* Neutral-50 @ 20% */
+
+    /* ── Primary / Info (Baltic) ── */
+
+    /* Text & Icon */
+    --neo4j-primary-text: #0a6190; /* Baltic-50 */
+    --neo4j-primary-icon: #0a6190; /* Baltic-50 */
+
+    /* Background */
+    --neo4j-primary-bg-weak: #e7fafb; /* Baltic-10 */
+    --neo4j-primary-bg-strong: #0a6190; /* Baltic-50 */
+    --neo4j-primary-bg-status: #4c99a4; /* Baltic-40 */
+    --neo4j-primary-bg-selected: #e7fafb; /* Baltic-10 */
+
+    /* Border */
+    --neo4j-primary-border-weak: #8fe3e8; /* Baltic-20 */
+    --neo4j-primary-border-strong: #0a6190; /* Baltic-50 */
+
+    /* Hover & Pressed */
+    --neo4j-primary-hover-weak: rgba(48, 131, 157, 0.08); /* Baltic-45 @ 8% */
+    --neo4j-primary-pressed-weak: rgba(48, 131, 157, 0.12); /* Baltic-45 @ 12% */
+    --neo4j-primary-hover-strong: #02507b; /* Baltic-55 */
+    --neo4j-primary-pressed-strong: #014063; /* Baltic-60 */
+    --neo4j-primary-focus: #30839d; /* Baltic-45 */
+
+    /* ── Danger (Hibiscus) ── */
+
+    /* Text & Icon */
+    --neo4j-danger-text: #bb2d00; /* Hibiscus-45 */
+    --neo4j-danger-icon: #bb2d00; /* Hibiscus-45 */
+
+    /* Background */
+    --neo4j-danger-bg-weak: #ffe9e7; /* Hibiscus-10 */
+    --neo4j-danger-bg-strong: #bb2d00; /* Hibiscus-45 */
+    --neo4j-danger-bg-status: #e84e2c; /* Hibiscus-35 */
+
+    /* Border */
+    --neo4j-danger-border-weak: #ffaa97; /* Hibiscus-20 */
+    --neo4j-danger-border-strong: #bb2d00; /* Hibiscus-45 */
+
+    /* Hover & Pressed */
+    --neo4j-danger-hover-weak: rgba(212, 51, 0, 0.08); /* Hibiscus-40 @ 8% */
+    --neo4j-danger-pressed-weak: rgba(212, 51, 0, 0.12); /* Hibiscus-40 @ 12% */
+    --neo4j-danger-hover-strong: #961200; /* Hibiscus-50 */
+    --neo4j-danger-pressed-strong: #730e00; /* Hibiscus-55 */
+
+    /* ── Warning (Lemon) ── */
+
+    /* Text & Icon */
+    --neo4j-warning-text: #765500; /* Lemon-55 */
+    --neo4j-warning-icon: #765500; /* Lemon-55 */
+
+    /* Background */
+    --neo4j-warning-bg-weak: #fffad1; /* Lemon-10 */
+    --neo4j-warning-bg-strong: #765500; /* Lemon-55 */
+    --neo4j-warning-bg-status: #d7aa0a; /* Lemon-40 */
+
+    /* Border */
+    --neo4j-warning-border-weak: #ffd600; /* Lemon-30 */
+    --neo4j-warning-border-strong: #996e00; /* Lemon-50 */
+
+    /* ── Success (Forest) ── */
+
+    /* Text & Icon */
+    --neo4j-success-text: #3f7824; /* Forest-45 */
+    --neo4j-success-icon: #3f7824; /* Forest-45 */
+
+    /* Background */
+    --neo4j-success-bg-weak: #e7fcd7; /* Forest-10 */
+    --neo4j-success-bg-strong: #3f7824; /* Forest-45 */
+    --neo4j-success-bg-status: #5b992b; /* Forest-35 */
+
+    /* Border */
+    --neo4j-success-border-weak: #90cb62; /* Forest-20 */
+    --neo4j-success-border-strong: #3f7824; /* Forest-45 */
+
+    /* ── Discovery (Lavender) ── */
+
+    /* Text & Icon */
+    --neo4j-discovery-text: #5a34aa; /* Lavender-45 */
+    --neo4j-discovery-icon: #5a34aa; /* Lavender-45 */
+
+    /* Background */
+    --neo4j-discovery-bg-weak: #e9deff; /* Lavender-15 */
+    --neo4j-discovery-bg-strong: #5a34aa; /* Lavender-45 */
+    --neo4j-discovery-bg-status: #754ec8; /* Lavender-40 */
+
+    /* Border */
+    --neo4j-discovery-border-weak: #b38eff; /* Lavender-25 */
+    --neo4j-discovery-border-strong: #5a34aa; /* Lavender-45 */
+}

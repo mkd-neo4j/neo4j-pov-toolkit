@@ -1,0 +1,55 @@
+/* =============================================================================
+   Neo4j Dark Theme — Code Highlighting Tokens
+   Cypher syntax highlighting colors for dark backgrounds.
+   Source of truth: ../colors/code-highlighting/dark/DARK-CODE-HIGHLIGHTING.md
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --neo4j-code-comment: #959aa1; /* Neutral-40 */
+        --neo4j-code-keyword: #ffc450; /* Marigold-25 */
+        --neo4j-code-keyword-literal: #ffc450; /* Marigold-25 */
+        --neo4j-code-operator: #ffc450; /* Marigold-25 */
+        --neo4j-code-label: #f96746; /* Hibiscus-30 */
+        --neo4j-code-function: #8fe3e8; /* Baltic-20 */
+        --neo4j-code-predicate-function: #8fe3e8; /* Baltic-20 */
+        --neo4j-code-procedure: #8fe3e8; /* Baltic-20 */
+        --neo4j-code-string: #90cb62; /* Forest-20 */
+        --neo4j-code-number: #ccb4ff; /* Lavender-20 */
+        --neo4j-code-boolean: #ccb4ff; /* Lavender-20 */
+        --neo4j-code-param: #ccb4ff; /* Lavender-20 */
+        --neo4j-code-property: #ffaa97; /* Hibiscus-20 */
+    }
+}
+
+[data-theme="dark"] {
+    --neo4j-code-comment: #959aa1;
+    --neo4j-code-keyword: #ffc450;
+    --neo4j-code-keyword-literal: #ffc450;
+    --neo4j-code-operator: #ffc450;
+    --neo4j-code-label: #f96746;
+    --neo4j-code-function: #8fe3e8;
+    --neo4j-code-predicate-function: #8fe3e8;
+    --neo4j-code-procedure: #8fe3e8;
+    --neo4j-code-string: #90cb62;
+    --neo4j-code-number: #ccb4ff;
+    --neo4j-code-boolean: #ccb4ff;
+    --neo4j-code-param: #ccb4ff;
+    --neo4j-code-property: #ffaa97;
+}
+
+[data-theme="light"] {
+    --neo4j-code-comment: #5e636a;
+    --neo4j-code-keyword: #3f7824;
+    --neo4j-code-keyword-literal: #3f7824;
+    --neo4j-code-operator: #3f7824;
+    --neo4j-code-label: #d43300;
+    --neo4j-code-function: #0a6190;
+    --neo4j-code-predicate-function: #0a6190;
+    --neo4j-code-procedure: #0a6190;
+    --neo4j-code-string: #986400;
+    --neo4j-code-number: #754ec8;
+    --neo4j-code-boolean: #754ec8;
+    --neo4j-code-param: #754ec8;
+    --neo4j-code-property: #730e00;
+}

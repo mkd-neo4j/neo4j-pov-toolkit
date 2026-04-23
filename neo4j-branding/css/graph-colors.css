@@ -1,0 +1,20 @@
+/* =============================================================================
+   Neo4j Graph Visualization Node Colors
+   12 ordered colors for graph node labels. Assign sequentially starting from 1.
+   Source of truth: ../colors/graph-colours/GRAPH-COLOURS.md
+   ============================================================================= */
+
+:root {
+    --neo4j-graph-1: #ffdf81; /* Yellow — Warm gold */
+    --neo4j-graph-2: #c990c0; /* Purple — Muted lavender-pink */
+    --neo4j-graph-3: #f79767; /* Orange — Soft coral-orange */
+    --neo4j-graph-4: #56c7e4; /* Cyan — Bright sky blue */
+    --neo4j-graph-5: #f16767; /* Red — Soft coral-red */
+    --neo4j-graph-6: #d8c7ae; /* Tan — Warm beige */
+    --neo4j-graph-7: #8dcc93; /* Green — Soft mint-green */
+    --neo4j-graph-8: #ecb4c9; /* Pink — Light rose */
+    --neo4j-graph-9: #4d8dda; /* Blue — Medium cobalt */
+    --neo4j-graph-10: #ffc354; /* Amber — Warm marigold */
+    --neo4j-graph-11: #da7294; /* Magenta — Dusty rose */
+    --neo4j-graph-12: #579380; /* Teal — Muted sea-green */
+}

@@ -1,0 +1,21 @@
+/* =============================================================================
+   Neo4j Light Theme — Code Highlighting Tokens
+   Cypher syntax highlighting colors for light backgrounds.
+   Source of truth: ../colors/code-highlighting/light/LIGHT-CODE-HIGHLIGHTING.md
+   ============================================================================= */
+
+:root {
+    --neo4j-code-comment: #5e636a; /* Neutral-55 */
+    --neo4j-code-keyword: #3f7824; /* Forest-45 */
+    --neo4j-code-keyword-literal: #3f7824; /* Forest-45 */
+    --neo4j-code-operator: #3f7824; /* Forest-45 */
+    --neo4j-code-label: #d43300; /* Hibiscus-40 */
+    --neo4j-code-function: #0a6190; /* Baltic-50 */
+    --neo4j-code-predicate-function: #0a6190; /* Baltic-50 */
+    --neo4j-code-procedure: #0a6190; /* Baltic-50 */
+    --neo4j-code-string: #986400; /* Marigold-55 */
+    --neo4j-code-number: #754ec8; /* Lavender-40 */
+    --neo4j-code-boolean: #754ec8; /* Lavender-40 */
+    --neo4j-code-param: #754ec8; /* Lavender-40 */
+    --neo4j-code-property: #730e00; /* Hibiscus-55 */
+}
